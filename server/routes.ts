@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { entries, tags, entryTags } from "@db/schema";
+import { entries, tags, entryTags, bodyMaps } from "@db/schema";
 import { eq, and, desc, like } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
@@ -167,6 +167,64 @@ export function registerRoutes(app: Express): Server {
     });
 
     res.json(results);
+  });
+
+  // Body Maps CRUD Operations
+  app.get("/api/body-maps", async (_req, res) => {
+    const maps = await db.query.bodyMaps.findMany({
+      orderBy: desc(bodyMaps.date),
+    });
+    res.json(maps);
+  });
+
+  app.get("/api/body-maps/:id", async (req, res) => {
+    const map = await db.query.bodyMaps.findFirst({
+      where: eq(bodyMaps.id, parseInt(req.params.id)),
+    });
+    if (!map) return res.status(404).json({ message: "Body map not found" });
+    res.json(map);
+  });
+
+  app.post("/api/body-maps", async (req, res) => {
+    const { sensations, emotionalState, notes, relatedMemoryId } = req.body;
+
+    const [newMap] = await db.insert(bodyMaps)
+      .values({
+        sensations,
+        emotionalState,
+        notes,
+        relatedMemoryId,
+      })
+      .returning();
+
+    res.json(newMap);
+  });
+
+  app.put("/api/body-maps/:id", async (req, res) => {
+    const { sensations, emotionalState, notes, relatedMemoryId } = req.body;
+
+    const [updatedMap] = await db.update(bodyMaps)
+      .set({
+        sensations,
+        emotionalState,
+        notes,
+        relatedMemoryId,
+        updatedAt: new Date(),
+      })
+      .where(eq(bodyMaps.id, parseInt(req.params.id)))
+      .returning();
+
+    if (!updatedMap) {
+      return res.status(404).json({ message: "Body map not found" });
+    }
+
+    res.json(updatedMap);
+  });
+
+  app.delete("/api/body-maps/:id", async (req, res) => {
+    await db.delete(bodyMaps)
+      .where(eq(bodyMaps.id, parseInt(req.params.id)));
+    res.status(204).end();
   });
 
   return httpServer;
