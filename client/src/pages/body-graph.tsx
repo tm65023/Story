@@ -15,7 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import BodyOutline from "@/components/body-outline";
 import { format } from "date-fns";
-import { Edit2, Trash2, Plus } from "lucide-react";
+import { Edit2, Trash2, Plus, ChevronRight } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Sensation = {
   x: number;
@@ -35,6 +41,7 @@ const sensationTypes = [
 export default function BodyGraph() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number>();
+  const [viewingMap, setViewingMap] = useState<any>(null);
   const [sensations, setSensations] = useState<Sensation[]>([]);
   const [selectedType, setSelectedType] = useState(sensationTypes[0].value);
   const [intensity, setIntensity] = useState(5);
@@ -177,6 +184,19 @@ export default function BodyGraph() {
     }
   };
 
+  // Function to summarize sensations for compact view
+  const summarizeSensations = (sensations: Sensation[]) => {
+    const counts = sensations.reduce((acc, sensation) => {
+      acc[sensation.type] = (acc[sensation.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts).map(([type, count]) => {
+      const sensationType = sensationTypes.find(t => t.value === type);
+      return `${count} ${sensationType?.label}${count > 1 ? 's' : ''}`;
+    }).join(', ');
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
@@ -184,7 +204,6 @@ export default function BodyGraph() {
           <h1 className="text-3xl font-bold">Body Graph</h1>
           <p className="text-muted-foreground">
             Map physical sensations and their connection to your emotional state.
-            Click on the body diagram to add sensations.
           </p>
         </div>
         {!isCreating && (
@@ -315,11 +334,10 @@ export default function BodyGraph() {
       ) : (
         <div className="space-y-4">
           {bodyMaps.map((map: any) => (
-            <Card key={map.id}>
-              <CardHeader>
+            <Card key={map.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Body Map</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(map.date), "MMMM d, yyyy 'at' h:mm a")}
                     </p>
@@ -328,14 +346,18 @@ export default function BodyGraph() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => loadBodyMap(map)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        loadBodyMap(map);
+                      }}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (confirm("Are you sure you want to delete this body map?")) {
                           deleteBodyMap.mutate(map.id);
                         }
@@ -346,30 +368,52 @@ export default function BodyGraph() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="relative w-full aspect-[1/2]">
-                  <BodyOutline className="absolute inset-0 stroke-2" />
-                  {map.sensations?.map((sensation: Sensation, i: number) => (
-                    <div
-                      key={i}
-                      className={`absolute w-4 h-4 rounded-full -translate-x-1/2 -translate-y-1/2 ${
-                        sensationTypes.find((t) => t.value === sensation.type)?.color
-                      } opacity-${Math.round((sensation.intensity / 10) * 100)}`}
-                      style={{
-                        left: `${sensation.x}%`,
-                        top: `${sensation.y}%`,
-                      }}
-                    />
-                  ))}
+              <CardContent className="pt-0" onClick={() => setViewingMap(map)}>
+                <div className="space-y-2">
+                  <p>{summarizeSensations(map.sensations || [])}</p>
+                  {map.emotionalState && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {map.emotionalState}
+                    </p>
+                  )}
+                  <Button variant="ghost" size="sm" className="mt-2">
+                    View Details <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
-                {map.emotionalState && (
-                  <p className="mt-4 text-muted-foreground">{map.emotionalState}</p>
-                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={!!viewingMap} onOpenChange={() => setViewingMap(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Body Map Details</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {viewingMap && format(new Date(viewingMap.date), "MMMM d, yyyy 'at' h:mm a")}
+            </p>
+          </DialogHeader>
+          <div className="relative w-full aspect-[1/2]">
+            <BodyOutline className="absolute inset-0 stroke-2" />
+            {viewingMap?.sensations?.map((sensation: Sensation, i: number) => (
+              <div
+                key={i}
+                className={`absolute w-4 h-4 rounded-full -translate-x-1/2 -translate-y-1/2 ${
+                  sensationTypes.find((t) => t.value === sensation.type)?.color
+                } opacity-${Math.round((sensation.intensity / 10) * 100)}`}
+                style={{
+                  left: `${sensation.x}%`,
+                  top: `${sensation.y}%`,
+                }}
+              />
+            ))}
+          </div>
+          {viewingMap?.emotionalState && (
+            <p className="mt-4 text-muted-foreground">{viewingMap.emotionalState}</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
