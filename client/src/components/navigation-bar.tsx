@@ -7,7 +7,7 @@ export default function NavigationBar() {
 
   const navItems = [
     {
-      title: "Daily Moment Tracker",
+      title: "Write Story",
       href: "/",
       icon: BookHeart,
     },

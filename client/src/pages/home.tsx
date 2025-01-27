@@ -12,7 +12,7 @@ import { Entry } from "@/lib/types";
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string>();
-  
+
   const { data: entries = [] } = useQuery<Entry[]>({
     queryKey: [
       `/api/search${searchQuery ? `?q=${searchQuery}` : ""}${
@@ -26,7 +26,7 @@ export default function Home() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Mindful Journal
+            Story
           </h1>
           <div className="flex items-center gap-4">
             <Link href="/calendar">
@@ -42,7 +42,7 @@ export default function Home() {
         <div className="grid gap-8 md:grid-cols-[1fr_300px]">
           <div className="space-y-8">
             <EntryEditor />
-            
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

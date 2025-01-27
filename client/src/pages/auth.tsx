@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, Mail, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 type AuthMode = "signup" | "login" | "verify";
 type ValidationError = { email?: string; code?: string };
@@ -16,6 +17,7 @@ export default function AuthPage() {
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<ValidationError>({});
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const validateEmail = (email: string) => {
     if (!email) {
@@ -164,6 +166,7 @@ export default function AuthPage() {
         title: "Success",
         description: "You're now signed in",
       });
+      setLocation("/");
     },
     onError: handleError,
   });
