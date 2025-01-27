@@ -4,8 +4,12 @@ import { db } from "@db";
 import { entries, tags, entryTags, bodyMaps } from "@db/schema";
 import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { format, subDays } from "date-fns";
+import { registerAuthRoutes } from "./auth";
 
 export function registerRoutes(app: Express): Server {
+  // Register authentication routes
+  registerAuthRoutes(app);
+
   const httpServer = createServer(app);
 
   // Get all entries

@@ -1,11 +1,35 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { createServer } from "net";
+import session from "express-session";
+import createMemoryStore from "memorystore";
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: number;
+  }
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session setup
+const MemoryStore = createMemoryStore(session);
+app.use(
+  session({
+    secret: process.env.REPL_ID || "mindful-journal-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: new MemoryStore({
+      checkPeriod: 86400000, // Prune expired entries every 24h
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,57 +61,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// Function to check if a port is available
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once('error', () => {
-      resolve(false);
-    });
-    server.once('listening', () => {
-      server.close();
-      resolve(true);
-    });
-    server.listen(port, '0.0.0.0');
-  });
-}
-
-// Function to find an available port
-async function findAvailablePort(startPort: number, maxAttempts: number = 10): Promise<number> {
-  for (let port = startPort; port < startPort + maxAttempts; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available ports found after ${maxAttempts} attempts`);
-}
-
 (async () => {
-  try {
-    const server = registerRoutes(app);
+  const server = registerRoutes(app);
 
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
-      throw err;
-    });
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
 
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
-
-    // Find an available port starting from 5000
-    const PORT = await findAvailablePort(5000);
-
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT}`);
-    });
-
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
   }
+
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`Server running on port ${PORT}`);
+  });
 })();

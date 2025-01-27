@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -10,6 +10,27 @@ export const entries = pgTable("entries", {
   date: timestamp("date").notNull().defaultNow(),
   imageUrl: text("image_url"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  userId: integer("user_id"),
+});
+
+// User Authentication
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  isVerified: boolean("is_verified").notNull().default(false),
+});
+
+// OTP Storage
+export const otps = pgTable("otps", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  type: text("type").notNull(), // 'signup' or 'login'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Memory Articulation Tool
@@ -18,21 +39,23 @@ export const memoryEntries = pgTable("memory_entries", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   aiSummary: text("ai_summary"),
-  metadata: json("metadata"), // Store AI interaction data
-  emotionalTags: json("emotional_tags"), // Array of emotional markers
+  metadata: text("metadata"), // Store AI interaction data
+  emotionalTags: text("emotional_tags"), // Array of emotional markers
   date: timestamp("date").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  userId: integer("user_id"),
 });
 
 // Body Graph
 export const bodyMaps = pgTable("body_maps", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull().defaultNow(),
-  sensations: json("sensations"), // Array of {area, intensity, type}
+  sensations: text("sensations"), // Array of {area, intensity, type}
   emotionalState: text("emotional_state"),
   notes: text("notes"),
   relatedMemoryId: integer("related_memory_id").references(() => memoryEntries.id),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  userId: integer("user_id"),
 });
 
 export const tags = pgTable("tags", {
@@ -46,8 +69,12 @@ export const entryTags = pgTable("entry_tags", {
 });
 
 // Relations
-export const entryRelations = relations(entries, ({ many }) => ({
+export const entryRelations = relations(entries, ({ many, one }) => ({
   entryTags: many(entryTags),
+  user: one(users, {
+    fields: [entries.userId],
+    references: [users.id],
+  }),
 }));
 
 export const tagRelations = relations(tags, ({ many }) => ({
@@ -70,6 +97,17 @@ export const bodyMapRelations = relations(bodyMaps, ({ one }) => ({
     fields: [bodyMaps.relatedMemoryId],
     references: [memoryEntries.id],
   }),
+  user: one(users, {
+    fields: [bodyMaps.userId],
+    references: [users.id],
+  }),
+}));
+
+export const otpRelations = relations(otps, ({ one }) => ({
+  user: one(users, {
+    fields: [otps.userId],
+    references: [users.id],
+  }),
 }));
 
 // Schemas
@@ -81,6 +119,10 @@ export const insertMemoryEntrySchema = createInsertSchema(memoryEntries);
 export const selectMemoryEntrySchema = createSelectSchema(memoryEntries);
 export const insertBodyMapSchema = createInsertSchema(bodyMaps);
 export const selectBodyMapSchema = createSelectSchema(bodyMaps);
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+export const insertOtpSchema = createInsertSchema(otps);
+export const selectOtpSchema = createSelectSchema(otps);
 
 // Types
 export type Entry = typeof entries.$inferSelect;
@@ -91,3 +133,7 @@ export type MemoryEntry = typeof memoryEntries.$inferSelect;
 export type InsertMemoryEntry = typeof memoryEntries.$inferInsert;
 export type BodyMap = typeof bodyMaps.$inferSelect;
 export type InsertBodyMap = typeof bodyMaps.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+export type OTP = typeof otps.$inferSelect;
+export type InsertOTP = typeof otps.$inferInsert;
