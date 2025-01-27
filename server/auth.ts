@@ -54,7 +54,7 @@ export function setupAuth(app: Express) {
 
       if (existingUser) {
         if (!existingUser.isVerified) {
-          // Resend verification code if user exists but isn't verified
+          // Generate new OTP for unverified user
           const code = generateOTP();
           const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -65,26 +65,20 @@ export function setupAuth(app: Express) {
             type: 'signup'
           });
 
-          try {
-            await sendOTPEmail(email, code, 'signup');
-            return res.json({ 
-              message: "Verification code resent. Please check your email (including spam folder).",
-              action: "verify"
-            });
-          } catch (emailError) {
-            console.error('Email sending error:', emailError);
-            return res.status(500).json({ 
-              message: "Unable to send verification email. Please try again later or contact support.",
-              details: app.get("env") === "development" ? 
-                (emailError instanceof Error ? emailError.message : String(emailError)) 
-                : undefined
-            });
-          }
+          // Don't wait for email to be sent
+          sendOTPEmail(email, code, 'signup').catch(err => {
+            console.error('Failed to send signup email:', err);
+          });
+
+          return res.json({ 
+            message: "Please check your email for verification code",
+            action: "verify"
+          });
         }
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Create new user
+      // Create new user without waiting for email
       const [user] = await db.insert(users)
         .values({
           email,
@@ -92,7 +86,7 @@ export function setupAuth(app: Express) {
         })
         .returning();
 
-      // Generate and store OTP
+      // Generate OTP
       const code = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -103,33 +97,19 @@ export function setupAuth(app: Express) {
         type: 'signup'
       });
 
-      try {
-        await sendOTPEmail(email, code, 'signup');
-        res.json({ 
-          message: "Signup successful. Please check your email (including spam folder) for verification code.",
-          action: "verify"
-        });
-      } catch (emailError) {
-        console.error('Email sending error:', emailError);
-        // Delete the user and OTP if email fails
-        await db.transaction(async (tx) => {
-          await tx.delete(otps).where(eq(otps.userId, user.id));
-          await tx.delete(users).where(eq(users.id, user.id));
-        });
-        res.status(500).json({ 
-          message: "Unable to send verification email. If you're using Gmail, please ensure you're using an App Password.",
-          details: app.get("env") === "development" ? 
-            (emailError instanceof Error ? emailError.message : String(emailError)) 
-            : undefined
-        });
-      }
+      // Send email asynchronously
+      sendOTPEmail(email, code, 'signup').catch(err => {
+        console.error('Failed to send signup email:', err);
+      });
+
+      res.json({ 
+        message: "Please check your email for verification code",
+        action: "verify"
+      });
     } catch (error) {
       console.error('Signup error:', error);
       res.status(500).json({ 
-        message: "Failed to process signup. Please try again later.",
-        details: app.get("env") === "development" ? 
-          (error instanceof Error ? error.message : String(error)) 
-          : undefined
+        message: "Failed to process signup. Please try again." 
       });
     }
   });
@@ -169,12 +149,12 @@ export function setupAuth(app: Express) {
 
       // Set session
       req.session.userId = user.id;
-      
+
       // Delete used OTP
       await db.delete(otps).where(eq(otps.id, otp.id));
 
       res.json({ 
-        message: "Verification successful",
+        message: "Successfully verified",
         user: { id: user.id, email: user.email }
       });
     } catch (error) {
@@ -186,6 +166,10 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
 
       // Find user
       const user = await db.query.users.findFirst({
@@ -200,9 +184,9 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email not verified" });
       }
 
-      // Generate and store OTP
+      // Generate OTP
       const code = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await db.insert(otps).values({
         userId: user.id,
@@ -211,10 +195,15 @@ export function setupAuth(app: Express) {
         type: 'login'
       });
 
-      // Send OTP email
-      await sendOTPEmail(email, code, 'login');
+      // Send email asynchronously
+      sendOTPEmail(email, code, 'login').catch(err => {
+        console.error('Failed to send login email:', err);
+      });
 
-      res.json({ message: "Login code sent to your email" });
+      res.json({ 
+        message: "Please check your email for verification code",
+        action: "verify" 
+      });
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ message: "Failed to process login" });

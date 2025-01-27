@@ -22,7 +22,7 @@ export const users = pgTable("users", {
   isVerified: boolean("is_verified").notNull().default(false),
 });
 
-// OTP Storage
+// OTP Storage for Email Verification
 export const otps = pgTable("otps", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
