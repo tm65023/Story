@@ -2,7 +2,7 @@ import { pgTable, text, serial, timestamp, integer, json } from "drizzle-orm/pg-
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
-// Daily Moment Tracker (existing entries table)
+// Daily Moment Tracker
 export const entries = pgTable("entries", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -45,6 +45,17 @@ export const entryTags = pgTable("entry_tags", {
   tagId: integer("tag_id").notNull().references(() => tags.id),
 });
 
+// Story Exports
+export const storyExports = pgTable("story_exports", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  timeRange: integer("time_range").notNull(),
+  entriesCount: integer("entries_count").notNull(),
+  dateRange: text("date_range").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Relations
 export const entryRelations = relations(entries, ({ many }) => ({
   entryTags: many(entryTags),
@@ -82,6 +93,10 @@ export const selectMemoryEntrySchema = createSelectSchema(memoryEntries);
 export const insertBodyMapSchema = createInsertSchema(bodyMaps);
 export const selectBodyMapSchema = createSelectSchema(bodyMaps);
 
+// Export schemas
+export const insertStoryExportSchema = createInsertSchema(storyExports);
+export const selectStoryExportSchema = createSelectSchema(storyExports);
+
 // Types
 export type Entry = typeof entries.$inferSelect;
 export type InsertEntry = typeof entries.$inferInsert;
@@ -91,3 +106,5 @@ export type MemoryEntry = typeof memoryEntries.$inferSelect;
 export type InsertMemoryEntry = typeof memoryEntries.$inferInsert;
 export type BodyMap = typeof bodyMaps.$inferSelect;
 export type InsertBodyMap = typeof bodyMaps.$inferInsert;
+export type StoryExport = typeof storyExports.$inferSelect;
+export type InsertStoryExport = typeof storyExports.$inferInsert;
