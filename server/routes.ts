@@ -440,5 +440,85 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
+  // Development endpoint to generate sample data
+  app.post("/api/dev/generate-sample-data", async (_req, res) => {
+    try {
+      const emotions = [
+        "feeling anxious and tense",
+        "calm and centered today",
+        "stressed about work",
+        "peaceful after meditation",
+        "happy and energetic",
+        "sad and low energy",
+        "worried about upcoming events",
+        "content and relaxed"
+      ];
+
+      const sampleData = [];
+
+      // Generate 30 days of data with multiple entries per day
+      for (let i = 0; i < 30; i++) {
+        const date = subDays(new Date(), i);
+
+        // Create 1-3 entries per day
+        const entriesCount = Math.floor(Math.random() * 3) + 1;
+
+        for (let j = 0; j < entriesCount; j++) {
+          // Vary the hour to distribute across morning/afternoon/evening
+          const hour = Math.floor(Math.random() * 24);
+          const entryDate = new Date(date.setHours(hour));
+
+          // Create recurring patterns by using similar sensation combinations
+          const sensations = [];
+
+          if (i % 3 === 0) {
+            // Pattern 1: Stress pattern
+            sensations.push(
+              { type: "tension", intensity: 7 + Math.random() * 3, x: 30, y: 20 },
+              { type: "pain", intensity: 5 + Math.random() * 3, x: 50, y: 30 }
+            );
+          } else if (i % 3 === 1) {
+            // Pattern 2: Anxiety pattern
+            sensations.push(
+              { type: "tingling", intensity: 6 + Math.random() * 3, x: 40, y: 40 },
+              { type: "tension", intensity: 8 + Math.random() * 2, x: 45, y: 45 }
+            );
+          } else {
+            // Pattern 3: Relaxation pattern
+            sensations.push(
+              { type: "numbness", intensity: 3 + Math.random() * 2, x: 60, y: 50 },
+              { type: "tingling", intensity: 2 + Math.random() * 2, x: 55, y: 55 }
+            );
+          }
+
+          // Add some random variations to make the data more realistic
+          if (Math.random() > 0.7) {
+            sensations.push({
+              type: ["pain", "tension", "numbness", "tingling"][Math.floor(Math.random() * 4)],
+              intensity: Math.random() * 10,
+              x: Math.random() * 100,
+              y: Math.random() * 100
+            });
+          }
+
+          sampleData.push({
+            date: entryDate,
+            sensations,
+            emotionalState: emotions[Math.floor(Math.random() * emotions.length)],
+            notes: "Sample data entry"
+          });
+        }
+      }
+
+      // Insert the sample data
+      await db.insert(bodyMaps).values(sampleData);
+
+      res.json({ message: "Sample data generated successfully", count: sampleData.length });
+    } catch (error) {
+      console.error("Error generating sample data:", error);
+      res.status(500).json({ message: "Failed to generate sample data" });
+    }
+  });
+
   return httpServer;
 }
