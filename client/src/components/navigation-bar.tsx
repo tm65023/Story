@@ -35,9 +35,9 @@ export default function NavigationBar() {
           {navItems.map((item) => (
             <li key={item.href}>
               <Link href={item.href}>
-                <a
+                <div
                   className={cn(
-                    "flex items-center gap-2 py-4 border-b-2 hover:text-primary transition-colors",
+                    "flex items-center gap-2 py-4 border-b-2 hover:text-primary transition-colors cursor-pointer",
                     location === item.href
                       ? "border-primary text-primary"
                       : "border-transparent text-muted-foreground"
@@ -45,7 +45,7 @@ export default function NavigationBar() {
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.title}</span>
-                </a>
+                </div>
               </Link>
             </li>
           ))}
