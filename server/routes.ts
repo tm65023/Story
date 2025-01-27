@@ -4,12 +4,8 @@ import { db } from "@db";
 import { entries, tags, entryTags, bodyMaps } from "@db/schema";
 import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { format, subDays } from "date-fns";
-import { registerAuthRoutes } from "./auth";
 
 export function registerRoutes(app: Express): Server {
-  // Register authentication routes
-  registerAuthRoutes(app);
-
   const httpServer = createServer(app);
 
   // Get all entries
@@ -295,12 +291,16 @@ export function registerRoutes(app: Express): Server {
         if (dayData) {
           const sensations = map.sensations as any[];
           sensations.forEach((sensation) => {
-            dayData[sensation.type] = (dayData[sensation.type] * dayData.count + sensation.intensity) / (dayData.count + 1);
+            if (typeof sensation.type === 'string' && typeof sensation.intensity === 'number') {
+              if (dayData[sensation.type] !== undefined) {
+                dayData[sensation.type] = (dayData[sensation.type] * dayData.count + sensation.intensity) / (dayData.count + 1);
+              }
 
-            // Track time-based patterns
-            timePatterns[timeOfDay].count++;
-            timePatterns[timeOfDay].intensities[sensation.type] =
-              (timePatterns[timeOfDay].intensities[sensation.type] || 0) + sensation.intensity;
+              // Track time-based patterns
+              timePatterns[timeOfDay].count++;
+              timePatterns[timeOfDay].intensities[sensation.type] =
+                (timePatterns[timeOfDay].intensities[sensation.type] || 0) + sensation.intensity;
+            }
           });
           dayData.count++;
         }
@@ -308,7 +308,7 @@ export function registerRoutes(app: Express): Server {
     });
 
     // Calculate recurring patterns
-    const recurringPatterns = maps.reduce((patterns, map) => {
+    const recurringPatterns = maps.reduce((patterns: Record<string, number>, map) => {
       if (map.sensations) {
         const sensations = map.sensations as any[];
         const key = sensations
@@ -320,7 +320,7 @@ export function registerRoutes(app: Express): Server {
         return patterns;
       }
       return patterns;
-    }, {} as Record<string, number>);
+    }, {});
 
     // Find significant patterns (occurring more than once)
     const significantPatterns = Object.entries(recurringPatterns)
@@ -335,7 +335,7 @@ export function registerRoutes(app: Express): Server {
 
     // Calculate average intensities by time of day
     Object.keys(timePatterns).forEach(timeOfDay => {
-      const { count, intensities } = timePatterns[timeOfDay];
+      const { count, intensities } = timePatterns[timeOfDay as keyof typeof timePatterns];
       if (count > 0) {
         Object.keys(intensities).forEach(type => {
           intensities[type] = Number((intensities[type] / count).toFixed(1));
