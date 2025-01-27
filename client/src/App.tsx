@@ -6,7 +6,6 @@ import Calendar from "@/pages/calendar";
 import MemoryTool from "@/pages/memory-tool";
 import BodyGraph from "@/pages/body-graph";
 import Insights from "@/pages/insights";
-import StoryCompilation from "@/pages/story-compilation";
 import NavigationBar from "@/components/navigation-bar";
 
 function App() {
@@ -19,7 +18,6 @@ function App() {
           <Route path="/calendar" component={Calendar} />
           <Route path="/memory-tool" component={MemoryTool} />
           <Route path="/body-graph" component={BodyGraph} />
-          <Route path="/stories" component={StoryCompilation} />
           <Route path="/insights" component={Insights} />
         </Switch>
       </div>
