@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { entries, tags, entryTags, bodyMaps, storyExports } from "@db/schema";
-import { eq, and, desc, like, sql } from "drizzle-orm";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
+import { format, subDays } from "date-fns";
 
 export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
@@ -522,138 +522,148 @@ export function registerRoutes(app: Express): Server {
 
   // Story Export Routes
   app.get("/api/story-exports", async (_req, res) => {
-    const exports = await db.query.storyExports.findMany({
-      orderBy: desc(storyExports.createdAt),
-    });
-    res.json(exports);
+    try {
+      const exports = await db.query.storyExports.findMany({
+        orderBy: [desc(storyExports.createdAt)],
+      });
+      res.json(exports);
+    } catch (error) {
+      console.error("Error fetching story exports:", error);
+      res.status(500).json({ message: "Failed to fetch story exports" });
+    }
   });
 
   app.post("/api/story-exports", async (req, res) => {
-    const { title, timeRange } = req.body;
+    try {
+      const { title, timeRange } = req.body;
 
-    const startDate = timeRange > 0 ? subDays(new Date(), timeRange) : new Date(0);
-    let entriesQuery = db.query.entries.findMany({
-      where: timeRange > 0
-        ? sql`${entries.date} >= ${startDate}`
-        : undefined,
-      orderBy: desc(entries.date),
-      with: {
-        entryTags: {
-          with: {
-            tag: true,
+      const startDate = timeRange > 0 ? subDays(new Date(), timeRange) : new Date(0);
+      const selectedEntries = await db.query.entries.findMany({
+        where: timeRange > 0 ? sql`${entries.date} >= ${startDate}` : undefined,
+        orderBy: [desc(entries.date)],
+        with: {
+          entryTags: {
+            with: {
+              tag: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    const selectedEntries = await entriesQuery;
+      if (selectedEntries.length === 0) {
+        return res.status(400).json({ message: "No entries found for the selected time range" });
+      }
 
-    if (selectedEntries.length === 0) {
-      return res.status(400).json({ message: "No entries found for the selected time range" });
-    }
-
-    // Generate HTML content
-    const content = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              line-height: 1.5;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 2rem;
-            }
-            .entry {
-              margin-bottom: 2rem;
-              padding-bottom: 1rem;
-              border-bottom: 1px solid #eee;
-            }
-            .entry-title {
-              font-size: 1.5rem;
-              font-weight: bold;
-              margin-bottom: 0.5rem;
-            }
-            .entry-date {
-              color: #666;
-              margin-bottom: 1rem;
-            }
-            .entry-content {
-              white-space: pre-wrap;
-            }
-            .entry-tags {
-              margin-top: 1rem;
-            }
-            .tag {
-              display: inline-block;
-              padding: 0.25rem 0.5rem;
-              background: #f3f4f6;
-              border-radius: 9999px;
-              font-size: 0.875rem;
-              margin-right: 0.5rem;
-              margin-bottom: 0.5rem;
-            }
-            .intro {
-              margin-bottom: 3rem;
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="intro">
-            <h1>${title}</h1>
-            <p>A collection of journal entries from ${
-              format(new Date(selectedEntries[selectedEntries.length - 1].date), "MMMM d, yyyy")
-            } to ${
-              format(new Date(selectedEntries[0].date), "MMMM d, yyyy")
-            }</p>
-          </div>
-          ${selectedEntries.map(entry => `
-            <div class="entry">
-              <div class="entry-title">${entry.title}</div>
-              <div class="entry-date">${format(new Date(entry.date), "MMMM d, yyyy")}</div>
-              <div class="entry-content">${entry.content}</div>
-              ${entry.imageUrl ? `<img src="${entry.imageUrl}" style="max-width: 100%; margin: 1rem 0;">` : ''}
-              <div class="entry-tags">
-                ${entry.entryTags.map(et => `
-                  <span class="tag">${et.tag.name}</span>
-                `).join('')}
-              </div>
+      const content = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body {
+                font-family: system-ui, -apple-system, sans-serif;
+                line-height: 1.5;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 2rem;
+              }
+              .entry {
+                margin-bottom: 2rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid #eee;
+              }
+              .entry-title {
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+              }
+              .entry-date {
+                color: #666;
+                margin-bottom: 1rem;
+              }
+              .entry-content {
+                white-space: pre-wrap;
+              }
+              .entry-tags {
+                margin-top: 1rem;
+              }
+              .tag {
+                display: inline-block;
+                padding: 0.25rem 0.5rem;
+                background: #f3f4f6;
+                border-radius: 9999px;
+                font-size: 0.875rem;
+                margin-right: 0.5rem;
+                margin-bottom: 0.5rem;
+              }
+              .intro {
+                margin-bottom: 3rem;
+                text-align: center;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="intro">
+              <h1>${title}</h1>
+              <p>A collection of journal entries from ${
+                format(new Date(selectedEntries[selectedEntries.length - 1].date), "MMMM d, yyyy")
+              } to ${
+                format(new Date(selectedEntries[0].date), "MMMM d, yyyy")
+              }</p>
             </div>
-          `).join('')}
-        </body>
-      </html>
-    `;
+            ${selectedEntries.map(entry => `
+              <div class="entry">
+                <div class="entry-title">${entry.title}</div>
+                <div class="entry-date">${format(new Date(entry.date), "MMMM d, yyyy")}</div>
+                <div class="entry-content">${entry.content}</div>
+                ${entry.imageUrl ? `<img src="${entry.imageUrl}" style="max-width: 100%; margin: 1rem 0;">` : ''}
+                <div class="entry-tags">
+                  ${entry.entryTags.map(et => `
+                    <span class="tag">${et.tag.name}</span>
+                  `).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </body>
+        </html>
+      `;
 
-    const dateRange = `${format(new Date(selectedEntries[selectedEntries.length - 1].date), "MMM d, yyyy")} - ${format(new Date(selectedEntries[0].date), "MMM d, yyyy")}`;
+      const dateRange = `${format(new Date(selectedEntries[selectedEntries.length - 1].date), "MMM d, yyyy")} - ${format(new Date(selectedEntries[0].date), "MMM d, yyyy")}`;
 
-    const [storyExport] = await db.insert(storyExports)
-      .values({
-        title,
-        timeRange,
-        entriesCount: selectedEntries.length,
-        dateRange,
-        content,
-      })
-      .returning();
+      const [storyExport] = await db.insert(storyExports)
+        .values({
+          title,
+          timeRange,
+          entriesCount: selectedEntries.length,
+          dateRange,
+          content,
+        })
+        .returning();
 
-    res.json(storyExport);
+      res.json(storyExport);
+    } catch (error) {
+      console.error("Error creating story export:", error);
+      res.status(500).json({ message: "Failed to create story export" });
+    }
   });
 
   app.get("/api/story-exports/:id/download", async (req, res) => {
-    const storyExport = await db.query.storyExports.findFirst({
-      where: eq(storyExports.id, parseInt(req.params.id)),
-    });
+    try {
+      const storyExport = await db.query.storyExports.findFirst({
+        where: eq(storyExports.id, parseInt(req.params.id)),
+      });
 
-    if (!storyExport) {
-      return res.status(404).json({ message: "Story export not found" });
+      if (!storyExport) {
+        return res.status(404).json({ message: "Story export not found" });
+      }
+
+      res.header("Content-Type", "text/html");
+      res.header("Content-Disposition", `attachment; filename="story-${storyExport.id}.html"`);
+      res.send(storyExport.content);
+    } catch (error) {
+      console.error("Error downloading story export:", error);
+      res.status(500).json({ message: "Failed to download story export" });
     }
-
-    res.header("Content-Type", "text/html");
-    res.header("Content-Disposition", `attachment; filename="story-${storyExport.id}.html"`);
-    res.send(storyExport.content);
   });
 
   return httpServer;
