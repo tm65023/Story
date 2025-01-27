@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Mail, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Mail, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "signup" | "login" | "verify";
 type ValidationError = { email?: string; code?: string };
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>("signup");
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<ValidationError>({});
@@ -41,12 +41,11 @@ export default function AuthPage() {
     const message = error.message || 
       (typeof error === 'string' ? error : 'An unexpected error occurred');
 
-    // Check for specific error messages to handle state transitions
     if (message.toLowerCase().includes('not verified')) {
       setMode('verify');
       toast({
         title: "Verification Required",
-        description: "Please verify your email before logging in.",
+        description: "Please verify your email to continue.",
         variant: "default",
       });
       return;
@@ -90,7 +89,7 @@ export default function AuthPage() {
       setMode("verify");
       toast({
         title: "Check your email",
-        description: data.message || "We've sent you a verification code. Check your spam folder if you don't see it.",
+        description: data.message || "We've sent you a verification code to sign in securely.",
       });
     },
     onError: handleError,
@@ -127,7 +126,7 @@ export default function AuthPage() {
       setMode("verify");
       toast({
         title: "Check your email",
-        description: "We've sent you a verification code. Check your spam folder if you don't see it.",
+        description: "We've sent you a verification code to sign in securely.",
       });
     },
     onError: handleError,
@@ -163,9 +162,8 @@ export default function AuthPage() {
       setErrors({});
       toast({
         title: "Success",
-        description: mode === "signup" ? "Account created successfully" : "Logged in successfully",
+        description: "You're now signed in",
       });
-      // The page will automatically redirect since user state will update
     },
     onError: handleError,
   });
@@ -178,20 +176,20 @@ export default function AuthPage() {
             {mode === "verify" ? (
               <>
                 <Mail className="h-5 w-5 text-primary" />
-                Enter Verification Code
-              </>
-            ) : mode === "signup" ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                Create Account
+                Verify Your Email
               </>
             ) : (
               <>
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                Welcome Back
+                <Mail className="h-5 w-5 text-primary" />
+                {mode === "signup" ? "Create Account" : "Welcome Back"}
               </>
             )}
           </CardTitle>
+          {mode !== "verify" && (
+            <CardDescription>
+              Sign in securely with just your email - no password needed
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {mode === "verify" ? (
@@ -201,14 +199,14 @@ export default function AuthPage() {
                   We've sent a verification code to <span className="font-medium">{email}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  The code will expire in 10 minutes. Check your spam folder if you don't see it.
+                  Enter the 6-digit code to continue
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Input
                   type="text"
-                  placeholder="Enter verification code"
+                  placeholder="Enter 6-digit code"
                   value={code}
                   onChange={(e) => {
                     setCode(e.target.value.toUpperCase());
@@ -233,7 +231,7 @@ export default function AuthPage() {
                 onClick={() => verifyMutation.mutate()}
                 disabled={verifyMutation.isPending || !code}
               >
-                {verifyMutation.isPending ? "Verifying..." : "Verify Code"}
+                {verifyMutation.isPending ? "Verifying..." : "Verify and Sign In"}
               </Button>
             </>
           ) : (
@@ -258,7 +256,7 @@ export default function AuthPage() {
               </div>
 
               <Button
-                className="w-full"
+                className="w-full flex items-center gap-2"
                 onClick={() =>
                   mode === "signup" ? signupMutation.mutate() : loginMutation.mutate()
                 }
@@ -268,8 +266,9 @@ export default function AuthPage() {
                 }
               >
                 {mode === "signup" 
-                  ? (signupMutation.isPending ? "Signing up..." : "Sign Up")
-                  : (loginMutation.isPending ? "Logging in..." : "Log In")}
+                  ? (signupMutation.isPending ? "Creating Account..." : "Continue with Email")
+                  : (loginMutation.isPending ? "Signing In..." : "Continue with Email")}
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </>
           )}
@@ -284,7 +283,7 @@ export default function AuthPage() {
               }}
             >
               {mode === "signup"
-                ? "Already have an account? Log in"
+                ? "Already have an account? Sign in"
                 : "Need an account? Sign up"}
             </Button>
           )}
