@@ -1,12 +1,22 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { setupAuth } from "./auth";
+import { protect } from "./middleware/protect";
 import { db } from "@db";
 import { entries, tags, entryTags, bodyMaps } from "@db/schema";
 import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { format, subDays } from "date-fns";
 
 export function registerRoutes(app: Express): Server {
-  const httpServer = createServer(app);
+  // Setup authentication routes and middleware
+  setupAuth(app);
+
+  // Protected routes
+  app.use([
+    "/api/entries",
+    "/api/body-maps",
+    "/api/insights",
+  ], protect);
 
   // Get all entries
   app.get("/api/entries", async (_req, res) => {
@@ -445,5 +455,6 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
+  const httpServer = createServer(app);
   return httpServer;
 }
