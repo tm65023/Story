@@ -13,6 +13,17 @@ export default function AuthPage() {
   const [code, setCode] = useState("");
   const { toast } = useToast();
 
+  const handleError = (error: any) => {
+    const message = error.message || 
+      (typeof error === 'string' ? error : 'An unexpected error occurred');
+
+    toast({
+      title: "Error",
+      description: message,
+      variant: "destructive",
+    });
+  };
+
   const signupMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/auth/signup", {
@@ -20,23 +31,29 @@ export default function AuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          throw new Error(data.message || text);
+        } catch {
+          throw new Error(text);
+        }
+      }
+
       return res.json();
     },
-    onSuccess: () => {
-      setMode("verify");
+    onSuccess: (data) => {
+      if (data.action === "verify") {
+        setMode("verify");
+      }
       toast({
         title: "Check your email",
-        description: "We've sent you a verification code",
+        description: data.message || "We've sent you a verification code",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: handleError,
   });
 
   const loginMutation = useMutation({
@@ -56,13 +73,7 @@ export default function AuthPage() {
         description: "We've sent you a verification code",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: handleError,
   });
 
   const verifyMutation = useMutation({
@@ -82,13 +93,7 @@ export default function AuthPage() {
       });
       // The page will automatically redirect since user state will update
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: handleError,
   });
 
   return (
@@ -106,11 +111,15 @@ export default function AuthPage() {
         <CardContent className="space-y-4">
           {mode === "verify" ? (
             <>
+              <p className="text-sm text-muted-foreground">
+                Enter the verification code sent to your email.
+                If you don't see it, check your spam folder.
+              </p>
               <Input
                 type="text"
                 placeholder="Enter verification code"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
                 className="text-center text-2xl tracking-widest"
                 maxLength={6}
               />
@@ -119,7 +128,7 @@ export default function AuthPage() {
                 onClick={() => verifyMutation.mutate()}
                 disabled={verifyMutation.isPending || !code}
               >
-                Verify Code
+                {verifyMutation.isPending ? "Verifying..." : "Verify Code"}
               </Button>
             </>
           ) : (
@@ -140,7 +149,9 @@ export default function AuthPage() {
                   !email
                 }
               >
-                {mode === "signup" ? "Sign Up" : "Log In"}
+                {mode === "signup" 
+                  ? (signupMutation.isPending ? "Signing up..." : "Sign Up")
+                  : (loginMutation.isPending ? "Logging in..." : "Log In")}
               </Button>
             </>
           )}

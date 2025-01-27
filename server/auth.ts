@@ -8,7 +8,6 @@ import { sendOTPEmail } from "./utils/email";
 import { randomBytes } from "crypto";
 
 const generateOTP = () => {
-  // Generate a 6-digit OTP
   return randomBytes(3).toString('hex').toUpperCase();
 };
 
@@ -35,17 +34,53 @@ export function setupAuth(app: Express) {
 
   app.use(session(sessionConfig));
 
-  // Auth routes
+  // Auth routes with improved error handling
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      if (!email.includes('@')) {
+        return res.status(400).json({ message: "Please enter a valid email address" });
+      }
+
       // Check if user exists
       const existingUser = await db.query.users.findFirst({
         where: eq(users.email, email),
       });
 
       if (existingUser) {
+        if (!existingUser.isVerified) {
+          // Resend verification code if user exists but isn't verified
+          const code = generateOTP();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+          await db.insert(otps).values({
+            userId: existingUser.id,
+            code,
+            expiresAt,
+            type: 'signup'
+          });
+
+          try {
+            await sendOTPEmail(email, code, 'signup');
+            return res.json({ 
+              message: "Verification code resent. Please check your email (including spam folder).",
+              action: "verify"
+            });
+          } catch (emailError) {
+            console.error('Email sending error:', emailError);
+            return res.status(500).json({ 
+              message: "Unable to send verification email. Please try again later or contact support.",
+              details: app.get("env") === "development" ? 
+                (emailError instanceof Error ? emailError.message : String(emailError)) 
+                : undefined
+            });
+          }
+        }
         return res.status(400).json({ message: "Email already registered" });
       }
 
@@ -59,7 +94,7 @@ export function setupAuth(app: Express) {
 
       // Generate and store OTP
       const code = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await db.insert(otps).values({
         userId: user.id,
@@ -68,13 +103,34 @@ export function setupAuth(app: Express) {
         type: 'signup'
       });
 
-      // Send OTP email
-      await sendOTPEmail(email, code, 'signup');
-
-      res.json({ message: "Signup initiated. Check your email for verification code." });
+      try {
+        await sendOTPEmail(email, code, 'signup');
+        res.json({ 
+          message: "Signup successful. Please check your email (including spam folder) for verification code.",
+          action: "verify"
+        });
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // Delete the user and OTP if email fails
+        await db.transaction(async (tx) => {
+          await tx.delete(otps).where(eq(otps.userId, user.id));
+          await tx.delete(users).where(eq(users.id, user.id));
+        });
+        res.status(500).json({ 
+          message: "Unable to send verification email. If you're using Gmail, please ensure you're using an App Password.",
+          details: app.get("env") === "development" ? 
+            (emailError instanceof Error ? emailError.message : String(emailError)) 
+            : undefined
+        });
+      }
     } catch (error) {
       console.error('Signup error:', error);
-      res.status(500).json({ message: "Failed to process signup" });
+      res.status(500).json({ 
+        message: "Failed to process signup. Please try again later.",
+        details: app.get("env") === "development" ? 
+          (error instanceof Error ? error.message : String(error)) 
+          : undefined
+      });
     }
   });
 
