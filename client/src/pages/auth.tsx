@@ -4,18 +4,53 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, Mail, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type AuthMode = "signup" | "login" | "verify";
+type ValidationError = { email?: string; code?: string };
 
 export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>("signup");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [errors, setErrors] = useState<ValidationError>({});
   const { toast } = useToast();
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      return "Email is required";
+    }
+    if (!email.includes('@')) {
+      return "Please enter a valid email address";
+    }
+    return undefined;
+  };
+
+  const validateCode = (code: string) => {
+    if (!code) {
+      return "Verification code is required";
+    }
+    if (code.length !== 6) {
+      return "Code must be 6 characters";
+    }
+    return undefined;
+  };
 
   const handleError = (error: any) => {
     const message = error.message || 
       (typeof error === 'string' ? error : 'An unexpected error occurred');
+
+    // Check for specific error messages to handle state transitions
+    if (message.toLowerCase().includes('not verified')) {
+      setMode('verify');
+      toast({
+        title: "Verification Required",
+        description: "Please verify your email before logging in.",
+        variant: "default",
+      });
+      return;
+    }
 
     toast({
       title: "Error",
@@ -26,6 +61,12 @@ export default function AuthPage() {
 
   const signupMutation = useMutation({
     mutationFn: async () => {
+      const emailError = validateEmail(email);
+      if (emailError) {
+        setErrors({ email: emailError });
+        throw new Error(emailError);
+      }
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,12 +86,11 @@ export default function AuthPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      if (data.action === "verify") {
-        setMode("verify");
-      }
+      setErrors({});
+      setMode("verify");
       toast({
         title: "Check your email",
-        description: data.message || "We've sent you a verification code",
+        description: data.message || "We've sent you a verification code. Check your spam folder if you don't see it.",
       });
     },
     onError: handleError,
@@ -58,19 +98,36 @@ export default function AuthPage() {
 
   const loginMutation = useMutation({
     mutationFn: async () => {
+      const emailError = validateEmail(email);
+      if (emailError) {
+        setErrors({ email: emailError });
+        throw new Error(emailError);
+      }
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          throw new Error(data.message || text);
+        } catch {
+          throw new Error(text);
+        }
+      }
+
       return res.json();
     },
     onSuccess: () => {
+      setErrors({});
       setMode("verify");
       toast({
         title: "Check your email",
-        description: "We've sent you a verification code",
+        description: "We've sent you a verification code. Check your spam folder if you don't see it.",
       });
     },
     onError: handleError,
@@ -78,15 +135,32 @@ export default function AuthPage() {
 
   const verifyMutation = useMutation({
     mutationFn: async () => {
+      const codeError = validateCode(code);
+      if (codeError) {
+        setErrors({ code: codeError });
+        throw new Error(codeError);
+      }
+
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          throw new Error(data.message || text);
+        } catch {
+          throw new Error(text);
+        }
+      }
+
       return res.json();
     },
     onSuccess: () => {
+      setErrors({});
       toast({
         title: "Success",
         description: mode === "signup" ? "Account created successfully" : "Logged in successfully",
@@ -100,29 +174,60 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle>
-            {mode === "verify"
-              ? "Enter Verification Code"
-              : mode === "signup"
-              ? "Create Account"
-              : "Welcome Back"}
+          <CardTitle className="flex items-center gap-2">
+            {mode === "verify" ? (
+              <>
+                <Mail className="h-5 w-5 text-primary" />
+                Enter Verification Code
+              </>
+            ) : mode === "signup" ? (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Create Account
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Welcome Back
+              </>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {mode === "verify" ? (
             <>
-              <p className="text-sm text-muted-foreground">
-                Enter the verification code sent to your email.
-                If you don't see it, check your spam folder.
-              </p>
-              <Input
-                type="text"
-                placeholder="Enter verification code"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="text-center text-2xl tracking-widest"
-                maxLength={6}
-              />
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  We've sent a verification code to <span className="font-medium">{email}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  The code will expire in 10 minutes. Check your spam folder if you don't see it.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Enter verification code"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.toUpperCase());
+                    setErrors({});
+                  }}
+                  className={cn(
+                    "text-center text-2xl tracking-widest",
+                    errors.code && "border-destructive"
+                  )}
+                  maxLength={6}
+                />
+                {errors.code && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.code}
+                  </div>
+                )}
+              </div>
+
               <Button
                 className="w-full"
                 onClick={() => verifyMutation.mutate()}
@@ -133,12 +238,25 @@ export default function AuthPage() {
             </>
           ) : (
             <>
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <div className="space-y-2">
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrors({});
+                  }}
+                  className={cn(errors.email && "border-destructive")}
+                />
+                {errors.email && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.email}
+                  </div>
+                )}
+              </div>
+
               <Button
                 className="w-full"
                 onClick={() =>
@@ -160,7 +278,10 @@ export default function AuthPage() {
             <Button
               variant="link"
               className="w-full"
-              onClick={() => setMode(mode === "signup" ? "login" : "signup")}
+              onClick={() => {
+                setMode(mode === "signup" ? "login" : "signup");
+                setErrors({});
+              }}
             >
               {mode === "signup"
                 ? "Already have an account? Log in"
