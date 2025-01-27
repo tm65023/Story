@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookHeart, Brain, Activity } from "lucide-react";
+import { BookHeart, Brain, Activity, LineChart } from "lucide-react";
 
 export default function NavigationBar() {
   const [location] = useLocation();
@@ -20,6 +20,11 @@ export default function NavigationBar() {
       title: "Body Graph",
       href: "/body-graph",
       icon: Activity,
+    },
+    {
+      title: "Insights",
+      href: "/insights",
+      icon: LineChart,
     },
   ];
 

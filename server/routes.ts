@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { entries, tags, entryTags, bodyMaps } from "@db/schema";
 import { eq, and, desc, like } from "drizzle-orm";
+import { format, subDays } from "date-fns";
 
 export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
@@ -225,6 +226,104 @@ export function registerRoutes(app: Express): Server {
     await db.delete(bodyMaps)
       .where(eq(bodyMaps.id, parseInt(req.params.id)));
     res.status(204).end();
+  });
+
+  // Pattern Recognition & Insights
+  app.get("/api/insights/body-maps", async (_req, res) => {
+    const maps = await db.query.bodyMaps.findMany({
+      orderBy: desc(bodyMaps.date),
+    });
+
+    // Calculate sensation distribution
+    const sensationCounts: Record<string, number> = {};
+    let totalSensations = 0;
+
+    maps.forEach((map) => {
+      if (map.sensations) {
+        const sensations = map.sensations as any[];
+        sensations.forEach((sensation) => {
+          sensationCounts[sensation.type] = (sensationCounts[sensation.type] || 0) + 1;
+          totalSensations++;
+        });
+      }
+    });
+
+    const sensationDistribution = Object.entries(sensationCounts).map(([type, count]) => ({
+      type,
+      count,
+    }));
+
+    // Calculate intensity trends over time
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = subDays(new Date(), i);
+      return {
+        date: format(date, "yyyy-MM-dd"),
+        pain: 0,
+        tension: 0,
+        numbness: 0,
+        tingling: 0,
+        count: 0,
+      };
+    }).reverse();
+
+    const intensityTrends = new Map(last30Days.map(day => [day.date, { ...day }]));
+
+    maps.forEach((map) => {
+      if (map.sensations) {
+        const date = format(new Date(map.date), "yyyy-MM-dd");
+        const dayData = intensityTrends.get(date);
+
+        if (dayData) {
+          const sensations = map.sensations as any[];
+          sensations.forEach((sensation) => {
+            dayData[sensation.type] = (dayData[sensation.type] * dayData.count + sensation.intensity) / (dayData.count + 1);
+            dayData.count++;
+          });
+        }
+      }
+    });
+
+    res.json({
+      sensationDistribution,
+      intensityTrends: Array.from(intensityTrends.values()),
+    });
+  });
+
+  app.get("/api/insights/emotional-states", async (_req, res) => {
+    const maps = await db.query.bodyMaps.findMany({
+      orderBy: desc(bodyMaps.date),
+    });
+
+    // Analyze emotional states
+    const emotionalPatterns = [];
+    const emotionalStates = maps.map(map => map.emotionalState).filter(Boolean);
+
+    if (emotionalStates.length > 0) {
+      // Find common words/phrases
+      const words = emotionalStates.join(" ").toLowerCase().split(/\W+/);
+      const wordFrequency: Record<string, number> = {};
+
+      words.forEach(word => {
+        if (word.length > 3) { // Filter out short words
+          wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+        }
+      });
+
+      const commonWords = Object.entries(wordFrequency)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5);
+
+      emotionalPatterns.push({
+        title: "Common Emotional Themes",
+        description: `Your most frequently mentioned emotional themes are: ${
+          commonWords.map(([word]) => word).join(", ")
+        }.`,
+      });
+    }
+
+    res.json({
+      commonPatterns: emotionalPatterns,
+    });
   });
 
   return httpServer;
