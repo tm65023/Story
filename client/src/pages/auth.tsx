@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [errors, setErrors] = useState<ValidationError>({});
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [previousMode, setPreviousMode] = useState<AuthMode>("login");
 
   const validateEmail = (email: string) => {
     if (!email) {
@@ -44,6 +45,7 @@ export default function AuthPage() {
       (typeof error === 'string' ? error : 'An unexpected error occurred');
 
     if (message.toLowerCase().includes('not verified')) {
+      setPreviousMode(mode);
       setMode('verify');
       toast({
         title: "Verification Required",
@@ -91,7 +93,12 @@ export default function AuthPage() {
     },
     onSuccess: () => {
       setErrors({});
+      setPreviousMode("signup");
       setMode("verify");
+      toast({
+        title: "Check your email",
+        description: "We've sent you a verification code.",
+      });
     },
     onError: handleError,
   });
@@ -114,7 +121,12 @@ export default function AuthPage() {
     },
     onSuccess: () => {
       setErrors({});
+      setPreviousMode("login");
       setMode("verify");
+      toast({
+        title: "Check your email",
+        description: "We've sent you a verification code.",
+      });
     },
     onError: handleError,
   });
@@ -137,7 +149,12 @@ export default function AuthPage() {
     },
     onSuccess: () => {
       setErrors({});
-      setLocation("/");
+      toast({
+        title: "Success!",
+        description: "You've been successfully verified and logged in.",
+      });
+      // Add a small delay before redirecting to ensure the toast is visible
+      setTimeout(() => setLocation("/"), 1000);
     },
     onError: handleError,
   });
@@ -212,7 +229,7 @@ export default function AuthPage() {
                 variant="ghost"
                 className="w-full flex items-center gap-2"
                 onClick={() => {
-                  setMode(mode === "signup" ? "login" : "signup");
+                  setMode(previousMode);
                   setCode("");
                   setErrors({});
                 }}
