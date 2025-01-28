@@ -23,8 +23,8 @@ async function createDevTransporter() {
 }
 
 async function createTransporter() {
-  // If we're in development and no SMTP is configured, use test account
-  if (isDevelopment && !process.env.SMTP_HOST) {
+  // If we're in development and no SMTP is configured or fails, use test account
+  if (isDevelopment) {
     return createDevTransporter();
   }
 
@@ -37,6 +37,19 @@ async function createTransporter() {
       console.error(`Missing email configuration: ${missingVars.join(', ')}`);
       throw new Error("Email configuration missing. Check SMTP_* environment variables");
     }
+  }
+
+  // In development, always log the configuration attempt
+  if (isDevelopment) {
+    console.log("Attempting SMTP configuration with:", {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_PORT === "465",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: "****"
+      }
+    });
   }
 
   try {
@@ -63,10 +76,10 @@ async function createTransporter() {
 export async function sendOTPEmail(to: string, otp: string, type: "signup" | "login") {
   const subject = type === "signup" ? "Complete your registration" : "Login verification code";
 
-  // In development, log the OTP
+  // Always log the OTP in development
   if (isDevelopment) {
     console.log(`[DEV MODE] Verification code for ${to}: ${otp}`);
-    // In dev mode without SMTP, we can return early
+    // In dev mode without SMTP, we can return early since the code is logged
     if (!process.env.SMTP_HOST) {
       return;
     }
@@ -95,7 +108,7 @@ export async function sendOTPEmail(to: string, otp: string, type: "signup" | "lo
       `,
     });
 
-    if (isDevelopment) {
+    if (isDevelopment && info) {
       console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
     }
 
@@ -103,6 +116,7 @@ export async function sendOTPEmail(to: string, otp: string, type: "signup" | "lo
   } catch (error) {
     console.error("Failed to send email:", error);
     // In development, we'll continue even if email fails
+    // since the code is already logged
     if (!isDevelopment) {
       throw error;
     }
