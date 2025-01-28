@@ -222,7 +222,7 @@ export default function Insights() {
 
       {/* Historical Analysis Section - Always show this section */}
       <div className="pt-8">
-        <h2 className="text-2xl font-bold">Historical Analysis</h2>
+        <h2 className="text-2xl font-bold">Insights & Patterns</h2>
         <p className="text-muted-foreground">
           Long-term trends and patterns in your journey
         </p>
