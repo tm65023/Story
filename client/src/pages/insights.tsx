@@ -169,13 +169,13 @@ export default function Insights() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center space-y-4">
-                      <BookHeart className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Daily Memories</h3>
+                      <Brain className="h-12 w-12 mx-auto text-primary" />
+                      <h3 className="font-semibold">Memory Articulation</h3>
                       <p className="text-sm text-muted-foreground">
-                        Record your daily thoughts, experiences, and reflections
+                        Dive deeper into specific memories and emotions
                       </p>
-                      <Link href="/">
-                        <Button className="w-full">Start Writing</Button>
+                      <Link href="/memory-tool">
+                        <Button className="w-full">Begin Exercise</Button>
                       </Link>
                     </div>
                   </CardContent>
@@ -199,13 +199,13 @@ export default function Insights() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center space-y-4">
-                      <Brain className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Memory Articulation</h3>
+                      <BookHeart className="h-12 w-12 mx-auto text-primary" />
+                      <h3 className="font-semibold">Daily Memories</h3>
                       <p className="text-sm text-muted-foreground">
-                        Dive deeper into specific memories and emotions
+                        Record your daily thoughts, experiences, and reflections
                       </p>
-                      <Link href="/memory-tool">
-                        <Button className="w-full">Begin Exercise</Button>
+                      <Link href="/journal">
+                        <Button className="w-full">Start Writing</Button>
                       </Link>
                     </div>
                   </CardContent>

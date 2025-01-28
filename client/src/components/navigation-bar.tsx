@@ -8,7 +8,7 @@ export default function NavigationBar() {
   const navItems = [
     {
       title: "Your Story",
-      href: "/insights",
+      href: "/",
       icon: LineChart,
     },
     {
@@ -23,7 +23,7 @@ export default function NavigationBar() {
     },
     {
       title: "Daily Memories",
-      href: "/",
+      href: "/journal",
       icon: BookHeart,
     },
   ];

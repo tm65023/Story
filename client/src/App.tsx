@@ -16,7 +16,6 @@ function Router() {
   const { data: user, isLoading } = useQuery({
     queryKey: ['/api/auth/user'],
   });
-  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -30,21 +29,15 @@ function Router() {
     return <AuthPage />;
   }
 
-  // Redirect to insights page after login if we're at the root
-  if (window.location.pathname === '/') {
-    setLocation('/insights');
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <NavigationBar />
       <Switch>
-        <Route path="/" component={Home} />
+        <Route path="/" component={Insights} />
+        <Route path="/journal" component={Home} />
         <Route path="/calendar" component={Calendar} />
         <Route path="/memory-tool" component={MemoryTool} />
         <Route path="/body-graph" component={BodyGraph} />
-        <Route path="/insights" component={Insights} />
       </Switch>
     </div>
   );
