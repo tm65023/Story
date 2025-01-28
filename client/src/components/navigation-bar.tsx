@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookHeart, Brain, Activity, LineChart } from "lucide-react";
+import { Brain, Activity, BookHeart, LineChart } from "lucide-react";
 
 export default function NavigationBar() {
   const [location] = useLocation();

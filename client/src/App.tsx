@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2 } from "lucide-react";
 import Home from "@/pages/home";
@@ -16,6 +16,7 @@ function Router() {
   const { data: user, isLoading } = useQuery({
     queryKey: ['/api/auth/user'],
   });
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -27,6 +28,12 @@ function Router() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  // Redirect to insights page after login if we're at the root
+  if (window.location.pathname === '/') {
+    setLocation('/insights');
+    return null;
   }
 
   return (

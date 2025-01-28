@@ -200,7 +200,7 @@ export default function Insights() {
                   <CardContent className="pt-6">
                     <div className="text-center space-y-4">
                       <Brain className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Memory Tool</h3>
+                      <h3 className="font-semibold">Memory Articulation</h3>
                       <p className="text-sm text-muted-foreground">
                         Dive deeper into specific memories and emotions
                       </p>
