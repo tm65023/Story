@@ -51,7 +51,6 @@ export default function AuthPage() {
       toast({
         title: "Verification Required",
         description: "Please verify your email to continue.",
-        variant: "default",
       });
       return;
     }
@@ -140,18 +139,22 @@ export default function AuthPage() {
         throw new Error(codeError);
       }
 
+      console.log('Sending verification request:', { email, code });
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
       });
 
-      return parseResponse(res);
+      const data = await parseResponse(res);
+      console.log('Verification response:', data);
+      return data;
     },
     onSuccess: (data) => {
+      console.log('Verification successful, updating query data and redirecting');
       setErrors({});
       queryClient.setQueryData(['/api/auth/user'], data.user);
-      setLocation("/");
+      window.location.href = '/';
     },
     onError: handleError,
   });
