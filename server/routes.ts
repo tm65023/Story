@@ -19,8 +19,9 @@ export function registerRoutes(app: Express): Server {
   ], protect);
 
   // Get all entries
-  app.get("/api/entries", async (_req, res) => {
+  app.get("/api/entries", async (req, res) => {
     const result = await db.query.entries.findMany({
+      where: eq(entries.userId, req.session.userId!),
       orderBy: desc(entries.date),
       with: {
         entryTags: {

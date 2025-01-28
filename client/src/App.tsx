@@ -10,10 +10,12 @@ import BodyGraph from "@/pages/body-graph";
 import Insights from "@/pages/insights";
 import NavigationBar from "@/components/navigation-bar";
 import AuthPage from "@/pages/auth";
-import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 
 function Router() {
-  const { user, isLoading } = useAuth();
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['/api/auth/user'],
+  });
 
   if (isLoading) {
     return (
