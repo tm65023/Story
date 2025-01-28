@@ -89,13 +89,9 @@ export default function AuthPage() {
 
       return parseResponse(res);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setErrors({});
       setMode("verify");
-      toast({
-        title: "Check your email",
-        description: data.message || "We've sent you a verification code to sign in securely.",
-      });
     },
     onError: handleError,
   });
@@ -119,10 +115,6 @@ export default function AuthPage() {
     onSuccess: () => {
       setErrors({});
       setMode("verify");
-      toast({
-        title: "Check your email",
-        description: "We've sent you a verification code to sign in securely.",
-      });
     },
     onError: handleError,
   });
@@ -145,10 +137,6 @@ export default function AuthPage() {
     },
     onSuccess: () => {
       setErrors({});
-      toast({
-        title: "Success",
-        description: "You're now signed in",
-      });
       setLocation("/");
     },
     onError: handleError,
