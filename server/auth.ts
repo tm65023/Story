@@ -65,10 +65,16 @@ export function setupAuth(app: Express) {
             type: 'signup'
           });
 
-          // Don't wait for email to be sent
-          sendOTPEmail(email, code, 'signup').catch(err => {
+          // Send email with new OTP
+          try {
+            await sendOTPEmail(email, code, 'signup');
+          } catch (err) {
             console.error('Failed to send signup email:', err);
-          });
+            // In development, we continue since the code is logged
+            if (process.env.NODE_ENV === 'production') {
+              throw err;
+            }
+          }
 
           return res.json({ message: "Please check your email for verification code" });
         }
@@ -94,10 +100,16 @@ export function setupAuth(app: Express) {
         type: 'signup'
       });
 
-      // Send email asynchronously
-      sendOTPEmail(email, code, 'signup').catch(err => {
+      // Send email with OTP
+      try {
+        await sendOTPEmail(email, code, 'signup');
+      } catch (err) {
         console.error('Failed to send signup email:', err);
-      });
+        // In development, we continue since the code is logged
+        if (process.env.NODE_ENV === 'production') {
+          throw err;
+        }
+      }
 
       res.json({ message: "Please check your email for verification code" });
     } catch (error) {
@@ -187,10 +199,16 @@ export function setupAuth(app: Express) {
         type: 'login'
       });
 
-      // Send email asynchronously
-      sendOTPEmail(email, code, 'login').catch(err => {
+      // Send email with OTP
+      try {
+        await sendOTPEmail(email, code, 'login');
+      } catch (err) {
         console.error('Failed to send login email:', err);
-      });
+        // In development, we continue since the code is logged
+        if (process.env.NODE_ENV === 'production') {
+          throw err;
+        }
+      }
 
       res.json({ message: "Please check your email for verification code" });
     } catch (error) {
