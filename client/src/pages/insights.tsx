@@ -95,9 +95,9 @@ export default function Insights() {
           {hasEnoughData ? (
             <>
               <p className="text-lg leading-relaxed">
-                Your story began on {format(new Date(storyStats!.firstEntryDate), 'MMMM d, yyyy')}. 
-                Since then, you've captured {storyStats!.totalEntries} meaningful moments in your journal, 
-                explored your physical well-being through {storyStats!.bodyGraphCount} body awareness sessions, 
+                Your story began on {format(new Date(storyStats!.firstEntryDate), 'MMMM d, yyyy')}.
+                Since then, you've captured {storyStats!.totalEntries} meaningful moments in your journal,
+                explored your physical well-being through {storyStats!.bodyGraphCount} body awareness sessions,
                 and delved into {storyStats!.memoryToolCount} guided memory explorations.
               </p>
               {storyStats!.mostUsedTags.length > 0 && (
@@ -105,13 +105,13 @@ export default function Insights() {
                   Your journey often revolves around themes of{' '}
                   {storyStats!.mostUsedTags
                     .slice(0, 3)
-                    .map(tag => tag.name.toLowerCase())
-                    .join(', ')}, 
+                    .map((tag) => tag.name.toLowerCase())
+                    .join(', ')},
                   showing what matters most in your story.
                 </p>
               )}
               <p className="text-lg leading-relaxed">
-                Your most active day of reflection was {format(new Date(storyStats!.mostActiveDay.day), 'MMMM d')}, 
+                Your most active day of reflection was {format(new Date(storyStats!.mostActiveDay.day), 'MMMM d')},
                 when you added {storyStats!.mostActiveDay.count} entries to your journey.
               </p>
               {storyStats?.entryDates && (
@@ -224,6 +224,73 @@ export default function Insights() {
             <p className="text-muted-foreground">
               Discover patterns and trends in your physical and emotional well-being
             </p>
+          </div>
+
+          {/* Summary Statistics Cards */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Journal Entries
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.totalEntries || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Since {storyStats?.firstEntryDate ? format(new Date(storyStats.firstEntryDate), 'MMMM d, yyyy') : 'starting'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Most Active Day
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.mostActiveDay.count || 0} entries
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  on {storyStats?.mostActiveDay.day ? format(new Date(storyStats.mostActiveDay.day), 'MMMM d, yyyy') : 'N/A'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Body Graph Records
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.bodyGraphCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Physical sensation records
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Memory Articulations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.memoryToolCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Guided memory explorations
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-8 md:grid-cols-2">
