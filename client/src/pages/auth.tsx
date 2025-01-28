@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Mail, ArrowRight } from "lucide-react";
+import { AlertCircle, Mail, ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
@@ -123,22 +123,6 @@ export default function AuthPage() {
         title: "Check your email",
         description: "We've sent you a verification code to sign in securely.",
       });
-      // In development mode, try to extract code from console logs
-      if (process.env.NODE_ENV === 'development') {
-        try {
-          const devLogs = (document.querySelector('#webview-console-logs') as HTMLElement)?.textContent || '';
-          const match = devLogs.match(/Verification code for [^:]+: ([A-Z0-9]+)/);
-          if (match) {
-            toast({
-              title: "Development Mode",
-              description: `Verification code: ${match[1]}`,
-              duration: 10000,
-            });
-          }
-        } catch (e) {
-          console.error('Failed to extract verification code:', e);
-        }
-      }
     },
     onError: handleError,
   });
@@ -234,6 +218,19 @@ export default function AuthPage() {
                 disabled={verifyMutation.isPending || !code}
               >
                 {verifyMutation.isPending ? "Verifying..." : "Verify and Sign In"}
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full flex items-center gap-2"
+                onClick={() => {
+                  setMode(mode === "signup" ? "login" : "signup");
+                  setCode("");
+                  setErrors({});
+                }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Change Email
               </Button>
             </>
           ) : (
