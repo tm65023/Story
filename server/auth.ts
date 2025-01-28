@@ -3,8 +3,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { db } from "@db";
 import { users, otps } from "@db/schema";
-import { eq, and, gt, sql } from "drizzle-orm";
-import { sendOTPEmail } from "./utils/email";
+import { eq, and, gt } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 const generateOTP = () => {
@@ -34,7 +33,7 @@ export function setupAuth(app: Express) {
 
   app.use(session(sessionConfig));
 
-  // Auth routes with improved error handling
+  // Auth routes
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const { email } = req.body;
@@ -53,34 +52,6 @@ export function setupAuth(app: Express) {
       });
 
       if (existingUser) {
-        if (!existingUser.isVerified) {
-          // Delete any existing OTPs for this user
-          await db.delete(otps).where(eq(otps.userId, existingUser.id));
-
-          // Generate new OTP for unverified user
-          const code = generateOTP();
-          const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-          await db.insert(otps).values({
-            userId: existingUser.id,
-            code,
-            expiresAt,
-            type: 'signup'
-          });
-
-          // Send email with new OTP
-          try {
-            await sendOTPEmail(email, code, 'signup');
-            console.log(`New OTP generated for unverified user: ${code}`);
-          } catch (err) {
-            console.error('Failed to send signup email:', err);
-            if (process.env.NODE_ENV === 'production') {
-              throw err;
-            }
-          }
-
-          return res.json({ message: "Please check your email for verification code" });
-        }
         return res.status(400).json({ message: "Email already registered" });
       }
 
@@ -88,11 +59,11 @@ export function setupAuth(app: Express) {
       const [user] = await db.insert(users)
         .values({
           email,
-          isVerified: false,
+          isVerified: true, // No email verification needed
         })
         .returning();
 
-      // Generate OTP
+      // Generate OTP for login
       const code = generateOTP();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
@@ -103,22 +74,50 @@ export function setupAuth(app: Express) {
         type: 'signup'
       });
 
-      console.log(`New OTP generated for new user: ${code}`);
-
-      // Send email with OTP
-      try {
-        await sendOTPEmail(email, code, 'signup');
-      } catch (err) {
-        console.error('Failed to send signup email:', err);
-        if (process.env.NODE_ENV === 'production') {
-          throw err;
-        }
-      }
-
-      res.json({ message: "Please check your email for verification code" });
+      console.log(`New signup OTP generated: ${code}`);
+      res.json({ message: "Account created. Use the code shown in console to login." });
     } catch (error) {
       console.error('Signup error:', error);
-      res.status(500).json({ message: "Failed to process signup. Please try again." });
+      res.status(500).json({ message: "Failed to process signup" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user
+      const user = await db.query.users.findFirst({
+        where: eq(users.email, email),
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Delete any existing OTPs for this user
+      await db.delete(otps).where(eq(otps.userId, user.id));
+
+      // Generate OTP
+      const code = generateOTP();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await db.insert(otps).values({
+        userId: user.id,
+        code,
+        expiresAt,
+        type: 'login'
+      });
+
+      console.log(`New login OTP generated: ${code}`);
+      res.json({ message: "Please use the code shown in console to verify" });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: "Failed to process login" });
     }
   });
 
@@ -141,13 +140,6 @@ export function setupAuth(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Delete expired OTPs for this user
-      await db.delete(otps)
-        .where(and(
-          eq(otps.userId, user.id),
-          sql`${otps.expiresAt} <= NOW()`
-        ));
-
       // Verify OTP
       const otp = await db.query.otps.findFirst({
         where: and(
@@ -168,13 +160,6 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Code has expired. Please request a new one." });
       }
 
-      // Update user verification status for signup
-      if (otp.type === 'signup') {
-        await db.update(users)
-          .set({ isVerified: true })
-          .where(eq(users.id, user.id));
-      }
-
       // Set session
       req.session.userId = user.id;
 
@@ -190,60 +175,6 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error('Verification error:', error);
       res.status(500).json({ message: "Failed to verify code" });
-    }
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      // Find user
-      const user = await db.query.users.findFirst({
-        where: eq(users.email, email),
-      });
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (!user.isVerified) {
-        return res.status(400).json({ message: "Email not verified" });
-      }
-
-      // Delete any existing OTPs for this user
-      await db.delete(otps).where(eq(otps.userId, user.id));
-
-      // Generate OTP
-      const code = generateOTP();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-      await db.insert(otps).values({
-        userId: user.id,
-        code,
-        expiresAt,
-        type: 'login'
-      });
-
-      console.log(`New login OTP generated: ${code}`);
-
-      // Send email with OTP
-      try {
-        await sendOTPEmail(email, code, 'login');
-      } catch (err) {
-        console.error('Failed to send login email:', err);
-        if (process.env.NODE_ENV === 'production') {
-          throw err;
-        }
-      }
-
-      res.json({ message: "Please check your email for verification code" });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: "Failed to process login" });
     }
   });
 

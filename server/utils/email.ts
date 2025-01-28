@@ -1,13 +1,26 @@
 import nodemailer from "nodemailer";
 
 async function createTransporter() {
-  // Check if SMTP configuration exists
-  const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  try {
+    // First try configured SMTP settings
+    console.log("Attempting to use configured SMTP settings...");
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT!),
+      secure: process.env.SMTP_PORT === "465",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-  if (missingVars.length > 0) {
-    console.log("Missing SMTP configuration, falling back to Ethereal email");
-    // Create test account
+    // Verify the connection
+    await transporter.verify();
+    console.log("SMTP connection verified successfully");
+    return transporter;
+  } catch (error) {
+    console.log("SMTP connection failed, falling back to Ethereal email");
+    // Create test account as fallback
     const testAccount = await nodemailer.createTestAccount();
     console.log("Created Ethereal test email account:", {
       user: testAccount.user,
@@ -25,18 +38,6 @@ async function createTransporter() {
       },
     });
   }
-
-  // Use configured SMTP settings
-  console.log("Using configured SMTP settings");
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT!),
-    secure: process.env.SMTP_PORT === "465",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
 }
 
 export async function sendOTPEmail(to: string, otp: string, type: "signup" | "login") {
@@ -67,13 +68,11 @@ export async function sendOTPEmail(to: string, otp: string, type: "signup" | "lo
       `,
     });
 
-    if (info) {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) {
-        console.log("Email Preview URL:", previewUrl);
-      } else {
-        console.log("Email sent successfully");
-      }
+    // Always show preview URL in development for testing
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+      console.log("Preview URL:", previewUrl);
+      console.log("Open this URL to see the email in your browser");
     }
 
     return info;
