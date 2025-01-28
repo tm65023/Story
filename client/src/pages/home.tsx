@@ -26,7 +26,7 @@ export default function Home() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Story
+            Daily Memories
           </h1>
           <div className="flex items-center gap-4">
             <Link href="/calendar">

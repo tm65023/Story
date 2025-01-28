@@ -7,7 +7,7 @@ export default function NavigationBar() {
 
   const navItems = [
     {
-      title: "Write Story",
+      title: "Daily Memories",
       href: "/",
       icon: BookHeart,
     },
