@@ -7,12 +7,12 @@ export default function NavigationBar() {
 
   const navItems = [
     {
-      title: "Your Story",
+      title: "Story",
       href: "/",
       icon: LineChart,
     },
     {
-      title: "Memory Articulation",
+      title: "Memory Tool",
       href: "/memory-tool",
       icon: Brain,
     },
@@ -22,7 +22,7 @@ export default function NavigationBar() {
       icon: Activity,
     },
     {
-      title: "Daily Memories",
+      title: "Journal",
       href: "/journal",
       icon: BookHeart,
     },
