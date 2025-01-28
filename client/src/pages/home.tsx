@@ -12,22 +12,18 @@ import {
 } from "@/components/ui/popover";
 import EntryEditor from "@/components/entry-editor";
 import EntryCard from "@/components/entry-card";
-import TimelineView from "@/components/timeline-view";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Entry } from "@/lib/types";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTag, setSelectedTag] = useState<string>();
   const [date, setDate] = useState<Date>(new Date());
   const [files, setFiles] = useState<FileList | null>(null);
 
   const { data: entries = [] } = useQuery<Entry[]>({
     queryKey: [
-      `/api/search${searchQuery ? `?q=${searchQuery}` : ""}${
-        selectedTag ? `&tag=${selectedTag}` : ""
-      }`,
+      `/api/search${searchQuery ? `?q=${searchQuery}` : ""}`,
     ],
   });
 
@@ -55,75 +51,69 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-8 md:grid-cols-[1fr_300px]">
-          <div className="space-y-8">
-            <div className="flex items-center gap-4">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal w-[240px]",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => newDate && setDate(newDate)}
-                    disabled={(date) => date > new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <div className="relative">
-                <Input
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf,.doc,.docx"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                />
+        <div className="space-y-8">
+          <div className="flex items-center gap-4">
+            <Popover>
+              <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  onClick={() => document.getElementById("file-upload")?.click()}
-                  className="flex items-center gap-2"
+                  className={cn(
+                    "justify-start text-left font-normal w-[240px]",
+                    !date && "text-muted-foreground"
+                  )}
                 >
-                  <Upload className="h-4 w-4" />
-                  {files?.length ? `${files.length} files selected` : "Upload Files"}
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : <span>Pick a date</span>}
                 </Button>
-              </div>
-            </div>
-
-            <EntryEditor date={date} />
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(newDate) => newDate && setDate(newDate)}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search entries..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
               />
-            </div>
-
-            <div className="space-y-4">
-              {entries.map((entry) => (
-                <EntryCard key={entry.id} entry={entry} />
-              ))}
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById("file-upload")?.click()}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {files?.length ? `${files.length} files selected` : "Upload Files"}
+              </Button>
             </div>
           </div>
 
-          <aside className="space-y-8">
-            <TimelineView entries={entries} onTagSelect={setSelectedTag} />
-          </aside>
+          <EntryEditor date={date} />
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search entries..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-4">
+            {entries.map((entry) => (
+              <EntryCard key={entry.id} entry={entry} />
+            ))}
+          </div>
         </div>
       </main>
     </div>
