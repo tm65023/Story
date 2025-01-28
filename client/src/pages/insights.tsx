@@ -86,9 +86,11 @@ export default function Insights() {
       {/* Story Summary Section */}
       <Card className="bg-card/50 border-2">
         <CardHeader>
-          <CardTitle className="text-2xl">Chapter {hasEnoughData ? "1" : "0"}</CardTitle>
+          <CardTitle className="text-2xl">
+            {hasEnoughData ? "Your Journey So Far" : "Start Your Story"}
+          </CardTitle>
           <CardDescription>
-            {hasEnoughData ? "The Beginning of Your Journey" : "Start Your Journey"}
+            {hasEnoughData ? "A collection of your experiences and growth" : "Begin capturing your journey"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -216,13 +218,12 @@ export default function Insights() {
         </CardContent>
       </Card>
 
-      {/* Only show insights section if there's enough data */}
       {hasEnoughData && (
         <>
           <div className="pt-8">
-            <h2 className="text-2xl font-bold">Insights & Patterns</h2>
+            <h2 className="text-2xl font-bold">Summary</h2>
             <p className="text-muted-foreground">
-              Discover patterns and trends in your physical and emotional well-being
+              Key metrics and milestones from your journey
             </p>
           </div>
 
@@ -291,6 +292,13 @@ export default function Insights() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="pt-8">
+            <h2 className="text-2xl font-bold">Insights & Patterns</h2>
+            <p className="text-muted-foreground">
+              Discover patterns and trends in your physical and emotional well-being
+            </p>
           </div>
 
           <div className="grid gap-8 md:grid-cols-2">
@@ -464,6 +472,137 @@ export default function Insights() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="pt-8">
+            <h2 className="text-2xl font-bold">Historical Analysis</h2>
+            <p className="text-muted-foreground">
+              Long-term trends and patterns in your journey
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Activity Heatmap */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Activity Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {storyStats?.entryDates && (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={storyStats.entryDates}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(date) => format(new Date(date), "MMM yyyy")}
+                        />
+                        <YAxis />
+                        <Tooltip
+                          labelFormatter={(date) =>
+                            format(new Date(date), "MMMM yyyy")
+                          }
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tag Usage Over Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Tag Evolution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {storyStats?.mostUsedTags && (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={storyStats.mostUsedTags}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) =>
+                            `${name} (${(percent * 100).toFixed(0)}%)`
+                          }
+                        >
+                          {storyStats.mostUsedTags.map((entry, index) => (
+                            <Cell
+                              key={entry.name}
+                              fill={`hsl(${index * 45}, 70%, 50%)`}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Memory Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Memory Depth Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {emotionalPatterns?.commonPatterns && (
+                  <div className="space-y-4">
+                    {emotionalPatterns.commonPatterns.map((pattern, index) => (
+                      <div
+                        key={index}
+                        className="p-4 rounded-lg border bg-card/50"
+                      >
+                        <h3 className="font-medium mb-2">{pattern.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {pattern.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Comparative Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Growth Indicators</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {bodyMapPatterns?.intensityTrends && emotionalPatterns?.commonPatterns && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg border bg-card/50">
+                      <h3 className="font-medium mb-2">Physical Awareness</h3>
+                      <div className="text-3xl font-bold text-primary">
+                        {storyStats?.bodyGraphCount || 0}
+                        <span className="text-sm text-muted-foreground ml-2">records</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-card/50">
+                      <h3 className="font-medium mb-2">Emotional Depth</h3>
+                      <div className="text-3xl font-bold text-primary">
+                        {storyStats?.memoryToolCount || 0}
+                        <span className="text-sm text-muted-foreground ml-2">explorations</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
