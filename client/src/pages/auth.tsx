@@ -184,7 +184,7 @@ export default function AuthPage() {
             ) : (
               <>
                 <Mail className="h-5 w-5 text-primary" />
-                {mode === "signup" ? "Create Account" : "Welcome Back"}
+                {mode === "signup" ? "Create Story Account" : "Welcome to Story"}
               </>
             )}
           </CardTitle>

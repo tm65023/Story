@@ -70,15 +70,12 @@ export function setupAuth(app: Express) {
             console.error('Failed to send signup email:', err);
           });
 
-          return res.json({ 
-            message: "Please check your email for verification code",
-            action: "verify"
-          });
+          return res.json({ message: "Please check your email for verification code" });
         }
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Create new user without waiting for email
+      // Create new user
       const [user] = await db.insert(users)
         .values({
           email,
@@ -102,15 +99,10 @@ export function setupAuth(app: Express) {
         console.error('Failed to send signup email:', err);
       });
 
-      res.json({ 
-        message: "Please check your email for verification code",
-        action: "verify"
-      });
+      res.json({ message: "Please check your email for verification code" });
     } catch (error) {
       console.error('Signup error:', error);
-      res.status(500).json({ 
-        message: "Failed to process signup. Please try again." 
-      });
+      res.status(500).json({ message: "Failed to process signup. Please try again." });
     }
   });
 
@@ -200,10 +192,7 @@ export function setupAuth(app: Express) {
         console.error('Failed to send login email:', err);
       });
 
-      res.json({ 
-        message: "Please check your email for verification code",
-        action: "verify" 
-      });
+      res.json({ message: "Please check your email for verification code" });
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ message: "Failed to process login" });
