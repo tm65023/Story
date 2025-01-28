@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, Mail, ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [previousMode, setPreviousMode] = useState<AuthMode>("login");
+  const queryClient = useQueryClient();
 
   const validateEmail = (email: string) => {
     if (!email) {
@@ -147,8 +148,9 @@ export default function AuthPage() {
 
       return parseResponse(res);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setErrors({});
+      queryClient.setQueryData(['/api/auth/user'], data.user);
       setLocation("/");
     },
     onError: handleError,
