@@ -170,46 +170,46 @@ export default function Insights() {
               </p>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4 flex flex-col h-full">
+                <Card className="h-full">
+                  <CardContent className="pt-6 h-full">
+                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
                       <Brain className="h-12 w-12 mx-auto text-primary" />
                       <h3 className="font-semibold">Memory Articulation</h3>
                       <p className="text-sm text-muted-foreground flex-grow">
                         Dive deeper into specific memories and emotions
                       </p>
-                      <Link href="/memory-tool">
-                        <Button className="w-full mt-auto">Begin Exercise</Button>
+                      <Link href="/memory-tool" className="mt-auto">
+                        <Button className="w-full">Begin Exercise</Button>
                       </Link>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4 flex flex-col h-full">
+                <Card className="h-full">
+                  <CardContent className="pt-6 h-full">
+                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
                       <Activity className="h-12 w-12 mx-auto text-primary" />
                       <h3 className="font-semibold">Body Graph</h3>
                       <p className="text-sm text-muted-foreground flex-grow">
                         Map your physical sensations and body awareness
                       </p>
-                      <Link href="/body-graph">
-                        <Button className="w-full mt-auto">Explore Body</Button>
+                      <Link href="/body-graph" className="mt-auto">
+                        <Button className="w-full">Explore Body</Button>
                       </Link>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4 flex flex-col h-full">
+                <Card className="h-full">
+                  <CardContent className="pt-6 h-full">
+                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
                       <BookHeart className="h-12 w-12 mx-auto text-primary" />
                       <h3 className="font-semibold">Daily Memories</h3>
                       <p className="text-sm text-muted-foreground flex-grow">
                         Record your daily thoughts, experiences, and reflections
                       </p>
-                      <Link href="/journal">
-                        <Button className="w-full mt-auto">Start Writing</Button>
+                      <Link href="/journal" className="mt-auto">
+                        <Button className="w-full">Start Writing</Button>
                       </Link>
                     </div>
                   </CardContent>
