@@ -3,7 +3,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { db } from "@db";
 import { users, otps } from "@db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { sendOTPEmail } from "./utils/email";
 import { randomBytes } from "crypto";
 
@@ -54,9 +54,12 @@ export function setupAuth(app: Express) {
 
       if (existingUser) {
         if (!existingUser.isVerified) {
+          // Delete any existing OTPs for this user
+          await db.delete(otps).where(eq(otps.userId, existingUser.id));
+
           // Generate new OTP for unverified user
           const code = generateOTP();
-          const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
           await db.insert(otps).values({
             userId: existingUser.id,
@@ -68,9 +71,9 @@ export function setupAuth(app: Express) {
           // Send email with new OTP
           try {
             await sendOTPEmail(email, code, 'signup');
+            console.log(`New OTP generated for unverified user: ${code}`);
           } catch (err) {
             console.error('Failed to send signup email:', err);
-            // In development, we continue since the code is logged
             if (process.env.NODE_ENV === 'production') {
               throw err;
             }
@@ -91,7 +94,7 @@ export function setupAuth(app: Express) {
 
       // Generate OTP
       const code = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       await db.insert(otps).values({
         userId: user.id,
@@ -100,12 +103,13 @@ export function setupAuth(app: Express) {
         type: 'signup'
       });
 
+      console.log(`New OTP generated for new user: ${code}`);
+
       // Send email with OTP
       try {
         await sendOTPEmail(email, code, 'signup');
       } catch (err) {
         console.error('Failed to send signup email:', err);
-        // In development, we continue since the code is logged
         if (process.env.NODE_ENV === 'production') {
           throw err;
         }
@@ -122,26 +126,46 @@ export function setupAuth(app: Express) {
     try {
       const { email, code } = req.body;
 
+      // Convert code to uppercase for consistent comparison
+      const normalizedCode = code.toUpperCase();
+
+      console.log(`Attempting to verify code: ${normalizedCode} for email: ${email}`);
+
       // Find user
       const user = await db.query.users.findFirst({
         where: eq(users.email, email),
       });
 
       if (!user) {
+        console.log('User not found for email:', email);
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Delete expired OTPs for this user
+      await db.delete(otps)
+        .where(and(
+          eq(otps.userId, user.id),
+          sql`${otps.expiresAt} <= NOW()`
+        ));
 
       // Verify OTP
       const otp = await db.query.otps.findFirst({
         where: and(
           eq(otps.userId, user.id),
-          eq(otps.code, code),
-          gt(otps.expiresAt, new Date())
+          eq(otps.code, normalizedCode)
         ),
       });
 
       if (!otp) {
+        console.log('No matching OTP found');
         return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      // Check if OTP is expired
+      if (otp.expiresAt < new Date()) {
+        console.log('OTP expired');
+        await db.delete(otps).where(eq(otps.id, otp.id));
+        return res.status(400).json({ message: "Code has expired. Please request a new one." });
       }
 
       // Update user verification status for signup
@@ -156,6 +180,8 @@ export function setupAuth(app: Express) {
 
       // Delete used OTP
       await db.delete(otps).where(eq(otps.id, otp.id));
+
+      console.log(`Successfully verified code for user: ${user.id}`);
 
       res.json({ 
         message: "Successfully verified",
@@ -188,9 +214,12 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email not verified" });
       }
 
+      // Delete any existing OTPs for this user
+      await db.delete(otps).where(eq(otps.userId, user.id));
+
       // Generate OTP
       const code = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       await db.insert(otps).values({
         userId: user.id,
@@ -199,12 +228,13 @@ export function setupAuth(app: Express) {
         type: 'login'
       });
 
+      console.log(`New login OTP generated: ${code}`);
+
       // Send email with OTP
       try {
         await sendOTPEmail(email, code, 'login');
       } catch (err) {
         console.error('Failed to send login email:', err);
-        // In development, we continue since the code is logged
         if (process.env.NODE_ENV === 'production') {
           throw err;
         }
