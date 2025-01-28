@@ -4,89 +4,72 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 // In development, we'll create a test account if SMTP isn't configured
 async function createDevTransporter() {
-  // Create test account if SMTP not configured
-  const testAccount = await nodemailer.createTestAccount();
-  console.log("Created test email account:", {
-    user: testAccount.user,
-    pass: testAccount.pass,
-  });
-
-  return nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false,
-    auth: {
+  try {
+    // Create test account if SMTP not configured
+    const testAccount = await nodemailer.createTestAccount();
+    console.log("Created Ethereal test email account:", {
       user: testAccount.user,
       pass: testAccount.pass,
-    },
-  });
+      web: "https://ethereal.email",
+    });
+
+    return nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to create test account:", error);
+    throw error;
+  }
 }
 
 async function createTransporter() {
-  // If we're in development and no SMTP is configured or fails, use test account
+  // In development, always use Ethereal for reliable testing
   if (isDevelopment) {
+    console.log("Development mode: Using Ethereal email service");
     return createDevTransporter();
   }
 
-  // Check required env vars only if SMTP is being used
-  if (process.env.SMTP_HOST) {
-    const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-    if (missingVars.length > 0) {
-      console.error(`Missing email configuration: ${missingVars.join(', ')}`);
-      throw new Error("Email configuration missing. Check SMTP_* environment variables");
-    }
+  // Production SMTP setup
+  if (!process.env.SMTP_HOST) {
+    throw new Error("SMTP_HOST is required in production");
   }
 
-  // In development, always log the configuration attempt
-  if (isDevelopment) {
-    console.log("Attempting SMTP configuration with:", {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_PORT === "465",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: "****"
-      }
-    });
+  const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+  if (missingVars.length > 0) {
+    throw new Error(`Missing email configuration: ${missingVars.join(', ')}`);
   }
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT!),
-      secure: process.env.SMTP_PORT === "465",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    return transporter;
-  } catch (error) {
-    console.error("Failed to create SMTP transporter:", error);
-    if (isDevelopment) {
-      return createDevTransporter();
-    }
-    throw error;
-  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT!),
+    secure: process.env.SMTP_PORT === "465",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 }
 
 export async function sendOTPEmail(to: string, otp: string, type: "signup" | "login") {
   const subject = type === "signup" ? "Complete your registration" : "Login verification code";
 
-  // Always log the OTP in development
-  if (isDevelopment) {
-    console.log(`[DEV MODE] Verification code for ${to}: ${otp}`);
-    // In dev mode without SMTP, we can return early since the code is logged
-    if (!process.env.SMTP_HOST) {
-      return;
-    }
-  }
+  console.log(`Attempting to send ${type} verification code to ${to}`);
 
   try {
     const mailer = await createTransporter();
+
+    // Always log the OTP in development mode
+    if (isDevelopment) {
+      console.log(`[DEV MODE] Verification code for ${to}: ${otp}`);
+    }
 
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER ? `"Story" <${process.env.SMTP_USER}>` : '"Story" <no-reply@story.app>',
@@ -109,14 +92,14 @@ export async function sendOTPEmail(to: string, otp: string, type: "signup" | "lo
     });
 
     if (isDevelopment && info) {
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+      console.log("Ethereal Email Preview URL:", nodemailer.getTestMessageUrl(info));
+      console.log("Check the preview URL to view the email in your browser");
     }
 
     return info;
   } catch (error) {
     console.error("Failed to send email:", error);
-    // In development, we'll continue even if email fails
-    // since the code is already logged
+    // In development mode, we'll continue since we logged the code
     if (!isDevelopment) {
       throw error;
     }
