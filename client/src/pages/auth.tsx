@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, Mail, ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -16,7 +15,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<ValidationError>({});
-  const { toast } = useToast();
+  const [status, setStatus] = useState<string>("");
   const [, setLocation] = useLocation();
   const [previousMode, setPreviousMode] = useState<AuthMode>("login");
   const queryClient = useQueryClient();
@@ -48,18 +47,11 @@ export default function AuthPage() {
     if (message.toLowerCase().includes('not verified')) {
       setPreviousMode(mode);
       setMode('verify');
-      toast({
-        title: "Verification Required",
-        description: "Please verify your email to continue.",
-      });
+      setStatus("Please verify your email to continue.");
       return;
     }
 
-    toast({
-      title: "Error",
-      description: message,
-      variant: "destructive",
-    });
+    setStatus(message);
   };
 
   const parseResponse = async (res: Response) => {
@@ -95,10 +87,7 @@ export default function AuthPage() {
       setErrors({});
       setPreviousMode("signup");
       setMode("verify");
-      toast({
-        title: "Check your email",
-        description: "We've sent you a verification code.",
-      });
+      setStatus("We've sent you a verification code. Check your email.");
     },
     onError: handleError,
   });
@@ -123,10 +112,7 @@ export default function AuthPage() {
       setErrors({});
       setPreviousMode("login");
       setMode("verify");
-      toast({
-        title: "Check your email",
-        description: "We've sent you a verification code.",
-      });
+      setStatus("We've sent you a verification code. Check your email.");
     },
     onError: handleError,
   });
@@ -139,7 +125,6 @@ export default function AuthPage() {
         throw new Error(codeError);
       }
 
-      console.log('Sending verification request:', { email, code });
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,11 +132,9 @@ export default function AuthPage() {
       });
 
       const data = await parseResponse(res);
-      console.log('Verification response:', data);
       return data;
     },
     onSuccess: (data) => {
-      console.log('Verification successful, updating query data and redirecting');
       setErrors({});
       queryClient.setQueryData(['/api/auth/user'], data.user);
       window.location.href = '/';
@@ -183,6 +166,12 @@ export default function AuthPage() {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
+          {status && (
+            <div className="p-3 rounded-lg bg-muted text-muted-foreground text-sm">
+              {status}
+            </div>
+          )}
+
           {mode === "verify" ? (
             <>
               <div className="space-y-2">
@@ -202,6 +191,7 @@ export default function AuthPage() {
                   onChange={(e) => {
                     setCode(e.target.value.toUpperCase());
                     setErrors({});
+                    setStatus("");
                   }}
                   className={cn(
                     "text-center text-2xl tracking-widest",
@@ -232,6 +222,7 @@ export default function AuthPage() {
                   setMode(previousMode);
                   setCode("");
                   setErrors({});
+                  setStatus("");
                 }}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -248,6 +239,7 @@ export default function AuthPage() {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setErrors({});
+                    setStatus("");
                   }}
                   className={cn(errors.email && "border-destructive")}
                 />
@@ -284,6 +276,7 @@ export default function AuthPage() {
               onClick={() => {
                 setMode(mode === "signup" ? "login" : "signup");
                 setErrors({});
+                setStatus("");
               }}
             >
               {mode === "signup"
