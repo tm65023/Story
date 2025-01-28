@@ -60,6 +60,19 @@ export default function AuthPage() {
     });
   };
 
+  const parseResponse = async (res: Response) => {
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        throw new Error(data.message || text);
+      } catch {
+        throw new Error(text);
+      }
+    }
+    return res.json();
+  };
+
   const signupMutation = useMutation({
     mutationFn: async () => {
       const emailError = validateEmail(email);
@@ -74,17 +87,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          throw new Error(data.message || text);
-        } catch {
-          throw new Error(text);
-        }
-      }
-
-      return res.json();
+      return parseResponse(res);
     },
     onSuccess: (data) => {
       setErrors({});
@@ -111,17 +114,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          throw new Error(data.message || text);
-        } catch {
-          throw new Error(text);
-        }
-      }
-
-      return res.json();
+      return parseResponse(res);
     },
     onSuccess: () => {
       setErrors({});
@@ -130,6 +123,22 @@ export default function AuthPage() {
         title: "Check your email",
         description: "We've sent you a verification code to sign in securely.",
       });
+      // In development mode, try to extract code from console logs
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          const devLogs = (document.querySelector('#webview-console-logs') as HTMLElement)?.textContent || '';
+          const match = devLogs.match(/Verification code for [^:]+: ([A-Z0-9]+)/);
+          if (match) {
+            toast({
+              title: "Development Mode",
+              description: `Verification code: ${match[1]}`,
+              duration: 10000,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to extract verification code:', e);
+        }
+      }
     },
     onError: handleError,
   });
@@ -148,17 +157,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, code }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          throw new Error(data.message || text);
-        } catch {
-          throw new Error(text);
-        }
-      }
-
-      return res.json();
+      return parseResponse(res);
     },
     onSuccess: () => {
       setErrors({});
