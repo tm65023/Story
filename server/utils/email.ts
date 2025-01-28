@@ -71,8 +71,12 @@ export async function sendOTPEmail(to: string, otp: string, type: "signup" | "lo
     // Always show preview URL in development for testing
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
-      console.log("Preview URL:", previewUrl);
-      console.log("Open this URL to see the email in your browser");
+      console.log("----------------------------------------");
+      console.log("📧 Email Preview Available!");
+      console.log("----------------------------------------");
+      console.log("To view your verification email, open this URL:");
+      console.log(previewUrl);
+      console.log("----------------------------------------");
     }
 
     return info;
