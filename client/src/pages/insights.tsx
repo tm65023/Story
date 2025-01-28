@@ -170,45 +170,51 @@ export default function Insights() {
               </p>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="h-full">
+                <Card className="relative h-[280px]">
                   <CardContent className="pt-6 h-full">
-                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
+                    <div className="text-center">
                       <Brain className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Memory Articulation</h3>
-                      <p className="text-sm text-muted-foreground flex-grow">
+                      <h3 className="font-semibold mt-4">Memory Articulation</h3>
+                      <p className="text-sm text-muted-foreground mt-2">
                         Dive deeper into specific memories and emotions
                       </p>
-                      <Link href="/memory-tool" className="mt-auto">
+                    </div>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <Link href="/memory-tool">
                         <Button className="w-full">Begin Exercise</Button>
                       </Link>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="h-full">
+                <Card className="relative h-[280px]">
                   <CardContent className="pt-6 h-full">
-                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
+                    <div className="text-center">
                       <Activity className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Body Graph</h3>
-                      <p className="text-sm text-muted-foreground flex-grow">
+                      <h3 className="font-semibold mt-4">Body Graph</h3>
+                      <p className="text-sm text-muted-foreground mt-2">
                         Map your physical sensations and body awareness
                       </p>
-                      <Link href="/body-graph" className="mt-auto">
+                    </div>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <Link href="/body-graph">
                         <Button className="w-full">Explore Body</Button>
                       </Link>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="h-full">
+                <Card className="relative h-[280px]">
                   <CardContent className="pt-6 h-full">
-                    <div className="text-center space-y-4 flex flex-col min-h-[200px]">
+                    <div className="text-center">
                       <BookHeart className="h-12 w-12 mx-auto text-primary" />
-                      <h3 className="font-semibold">Daily Memories</h3>
-                      <p className="text-sm text-muted-foreground flex-grow">
+                      <h3 className="font-semibold mt-4">Daily Memories</h3>
+                      <p className="text-sm text-muted-foreground mt-2">
                         Record your daily thoughts, experiences, and reflections
                       </p>
-                      <Link href="/journal" className="mt-auto">
+                    </div>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <Link href="/journal">
                         <Button className="w-full">Start Writing</Button>
                       </Link>
                     </div>
