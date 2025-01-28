@@ -35,7 +35,26 @@ const getSensationColor = (type: string) => {
   }
 };
 
+interface StoryStats {
+  totalEntries: number;
+  totalTags: number;
+  mostUsedTags: { name: string; count: number }[];
+  entryDates: { date: string; count: number }[];
+  bodyGraphCount: number;
+  memoryToolCount: number;
+  firstEntryDate: string;
+  mostActiveDay: {
+    day: string;
+    count: number;
+  };
+}
+
 export default function Insights() {
+  // Fetch summary stats
+  const { data: storyStats } = useQuery<StoryStats>({
+    queryKey: ["/api/insights/summary"],
+  });
+
   // Fetch body map patterns
   const { data: bodyMapPatterns } = useQuery({
     queryKey: ["/api/insights/body-maps"],
@@ -54,6 +73,126 @@ export default function Insights() {
           Discover patterns and trends in your physical and emotional well-being
         </p>
       </div>
+
+      {/* Your Story Section */}
+      <Card className="bg-card/50 border-2">
+        <CardHeader>
+          <CardTitle className="text-2xl">Your Story</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Journal Entries
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.totalEntries || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Since {storyStats?.firstEntryDate ? format(new Date(storyStats.firstEntryDate), 'MMMM d, yyyy') : 'starting'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Most Active Day
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.mostActiveDay.count || 0} entries
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  on {storyStats?.mostActiveDay.day ? format(new Date(storyStats.mostActiveDay.day), 'MMMM d, yyyy') : 'N/A'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Body Graph Records
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.bodyGraphCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Physical sensation records
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Memory Tool Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {storyStats?.memoryToolCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Guided memory explorations
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {storyStats?.entryDates && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Your Journey Timeline</h3>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={storyStats.entryDates}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(date) => format(new Date(date), "MMM d")}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      labelFormatter={(date) =>
+                        format(new Date(date), "MMMM d, yyyy")
+                      }
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {storyStats?.mostUsedTags && storyStats.mostUsedTags.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Most Used Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {storyStats.mostUsedTags.map((tag) => (
+                  <div
+                    key={tag.name}
+                    className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
+                  >
+                    {tag.name} ({tag.count})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-8 md:grid-cols-2">
         {/* Sensation Distribution */}
@@ -74,7 +213,7 @@ export default function Insights() {
                       cy="50%"
                       outerRadius={80}
                       label={({ type, percentage }) =>
-                        `${type} (${percentage})`
+                        `${type} (${percentage}%)`
                       }
                     >
                       {bodyMapPatterns.sensationDistribution.map((entry: any) => (
