@@ -149,12 +149,7 @@ export default function AuthPage() {
     },
     onSuccess: () => {
       setErrors({});
-      toast({
-        title: "Success!",
-        description: "You've been successfully verified and logged in.",
-      });
-      // Add a small delay before redirecting to ensure the toast is visible
-      setTimeout(() => setLocation("/"), 1000);
+      setLocation("/");
     },
     onError: handleError,
   });
