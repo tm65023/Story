@@ -20,7 +20,22 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-import { Brain, Activity, BookHeart } from "lucide-react";
+import { Brain, Activity, BookHeart, LineChart as LineChartIcon } from "lucide-react";
+import type { StoryStats } from "@/lib/types";
+
+interface StoryStats {
+  totalEntries: number;
+  totalTags: number;
+  mostUsedTags: { name: string; count: number }[];
+  entryDates: { date: string; count: number }[];
+  bodyGraphCount: number;
+  memoryToolCount: number;
+  firstEntryDate: string;
+  mostActiveDay: {
+    day: string;
+    count: number;
+  };
+}
 
 // Helper function to get color based on sensation type
 const getSensationColor = (type: string) => {
@@ -37,20 +52,6 @@ const getSensationColor = (type: string) => {
       return "rgb(156, 163, 175)"; // gray-400
   }
 };
-
-interface StoryStats {
-  totalEntries: number;
-  totalTags: number;
-  mostUsedTags: { name: string; count: number }[];
-  entryDates: { date: string; count: number }[];
-  bodyGraphCount: number;
-  memoryToolCount: number;
-  firstEntryDate: string;
-  mostActiveDay: {
-    day: string;
-    count: number;
-  };
-}
 
 export default function Insights() {
   // Fetch summary stats
@@ -76,6 +77,7 @@ export default function Insights() {
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-8">
+      {/* Header Section */}
       <div>
         <h1 className="text-3xl font-bold">Your Story</h1>
         <p className="text-muted-foreground">
@@ -215,6 +217,191 @@ export default function Insights() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Historical Analysis Section - Always show this section */}
+      <div className="pt-8">
+        <h2 className="text-2xl font-bold">Historical Analysis</h2>
+        <p className="text-muted-foreground">
+          Long-term trends and patterns in your journey
+        </p>
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Activity Over Time */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Trends</CardTitle>
+            <CardDescription>Your journaling frequency over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {storyStats?.entryDates && (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={storyStats.entryDates}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(date) => format(new Date(date), "MMM yyyy")}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      labelFormatter={(date) =>
+                        format(new Date(date), "MMMM yyyy")
+                      }
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tag Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tag Distribution</CardTitle>
+            <CardDescription>Most frequently used tags in your entries</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {storyStats?.mostUsedTags && (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={storyStats.mostUsedTags}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ name, percent }) =>
+                        `${name} (${(percent * 100).toFixed(0)}%)`
+                      }
+                    >
+                      {storyStats.mostUsedTags.map((entry, index) => (
+                        <Cell
+                          key={entry.name}
+                          fill={`hsl(${index * 45}, 70%, 50%)`}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Emotional Patterns */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Emotional Patterns</CardTitle>
+            <CardDescription>Recurring emotional themes and insights</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {emotionalPatterns?.commonPatterns && (
+              <div className="space-y-4">
+                {emotionalPatterns.commonPatterns.map((pattern: any, index: number) => (
+                  <div
+                    key={index}
+                    className="p-4 rounded-lg border bg-card/50"
+                  >
+                    <h3 className="font-medium mb-2">{pattern.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {pattern.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Physical Sensations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Physical Awareness Patterns</CardTitle>
+            <CardDescription>Trends in body sensations and awareness</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bodyMapPatterns?.timePatterns && (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="80%"
+                    data={Object.entries(bodyMapPatterns.timePatterns).map(
+                      ([time, data]: [string, any]) => ({
+                        time,
+                        ...data.intensities,
+                      })
+                    )}
+                  >
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="time" />
+                    <PolarRadiusAxis angle={30} domain={[0, 10]} />
+                    {Object.keys(
+                      bodyMapPatterns.timePatterns.morning.intensities
+                    ).map((type) => (
+                      <Radar
+                        key={type}
+                        name={type}
+                        dataKey={type}
+                        stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
+                        fill={`hsl(${Math.random() * 360}, 70%, 50%)`}
+                        fillOpacity={0.2}
+                      />
+                    ))}
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Growth Indicators */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Growth Journey</CardTitle>
+          <CardDescription>Your progress in different areas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="p-4 rounded-lg border bg-card/50">
+              <h3 className="font-medium mb-2">Journal Entries</h3>
+              <div className="text-3xl font-bold text-primary">
+                {storyStats?.totalEntries || 0}
+                <span className="text-sm text-muted-foreground ml-2">total</span>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg border bg-card/50">
+              <h3 className="font-medium mb-2">Physical Awareness</h3>
+              <div className="text-3xl font-bold text-primary">
+                {storyStats?.bodyGraphCount || 0}
+                <span className="text-sm text-muted-foreground ml-2">records</span>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg border bg-card/50">
+              <h3 className="font-medium mb-2">Memory Explorations</h3>
+              <div className="text-3xl font-bold text-primary">
+                {storyStats?.memoryToolCount || 0}
+                <span className="text-sm text-muted-foreground ml-2">sessions</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -378,48 +565,6 @@ export default function Insights() {
               </CardContent>
             </Card>
 
-            {/* Time-based Patterns */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Time of Day Patterns</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {bodyMapPatterns?.timePatterns && (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart
-                        cx="50%"
-                        cy="50%"
-                        outerRadius="80%"
-                        data={Object.entries(bodyMapPatterns.timePatterns).map(
-                          ([time, data]: [string, any]) => ({
-                            time,
-                            ...data.intensities,
-                          })
-                        )}
-                      >
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="time" />
-                        <PolarRadiusAxis angle={30} domain={[0, 10]} />
-                        {Object.keys(
-                          bodyMapPatterns.timePatterns.morning.intensities
-                        ).map((type) => (
-                          <Radar
-                            key={type}
-                            name={type}
-                            dataKey={type}
-                            stroke={getSensationColor(type)}
-                            fill={getSensationColor(type)}
-                            fillOpacity={0.2}
-                          />
-                        ))}
-                        <Tooltip />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Recurring Patterns */}
             <Card>
@@ -472,137 +617,6 @@ export default function Insights() {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="pt-8">
-            <h2 className="text-2xl font-bold">Historical Analysis</h2>
-            <p className="text-muted-foreground">
-              Long-term trends and patterns in your journey
-            </p>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-2">
-            {/* Activity Heatmap */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Activity Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {storyStats?.entryDates && (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={storyStats.entryDates}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="date"
-                          tickFormatter={(date) => format(new Date(date), "MMM yyyy")}
-                        />
-                        <YAxis />
-                        <Tooltip
-                          labelFormatter={(date) =>
-                            format(new Date(date), "MMMM yyyy")
-                          }
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="count"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tag Usage Over Time */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tag Evolution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {storyStats?.mostUsedTags && (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={storyStats.mostUsedTags}
-                          dataKey="count"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }) =>
-                            `${name} (${(percent * 100).toFixed(0)}%)`
-                          }
-                        >
-                          {storyStats.mostUsedTags.map((entry, index) => (
-                            <Cell
-                              key={entry.name}
-                              fill={`hsl(${index * 45}, 70%, 50%)`}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Memory Analysis */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Memory Depth Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {emotionalPatterns?.commonPatterns && (
-                  <div className="space-y-4">
-                    {emotionalPatterns.commonPatterns.map((pattern, index) => (
-                      <div
-                        key={index}
-                        className="p-4 rounded-lg border bg-card/50"
-                      >
-                        <h3 className="font-medium mb-2">{pattern.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {pattern.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Comparative Analysis */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Growth Indicators</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {bodyMapPatterns?.intensityTrends && emotionalPatterns?.commonPatterns && (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg border bg-card/50">
-                      <h3 className="font-medium mb-2">Physical Awareness</h3>
-                      <div className="text-3xl font-bold text-primary">
-                        {storyStats?.bodyGraphCount || 0}
-                        <span className="text-sm text-muted-foreground ml-2">records</span>
-                      </div>
-                    </div>
-                    <div className="p-4 rounded-lg border bg-card/50">
-                      <h3 className="font-medium mb-2">Emotional Depth</h3>
-                      <div className="text-3xl font-bold text-primary">
-                        {storyStats?.memoryToolCount || 0}
-                        <span className="text-sm text-muted-foreground ml-2">explorations</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
