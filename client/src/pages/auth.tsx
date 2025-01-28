@@ -16,6 +16,7 @@ export default function AuthPage() {
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<ValidationError>({});
   const [status, setStatus] = useState<string>("");
+  const [isError, setIsError] = useState(false);
   const [, setLocation] = useLocation();
   const [previousMode, setPreviousMode] = useState<AuthMode>("login");
   const queryClient = useQueryClient();
@@ -48,10 +49,12 @@ export default function AuthPage() {
       setPreviousMode(mode);
       setMode('verify');
       setStatus("Please verify your email to continue.");
+      setIsError(false);
       return;
     }
 
     setStatus(message);
+    setIsError(true);
   };
 
   const parseResponse = async (res: Response) => {
@@ -88,6 +91,7 @@ export default function AuthPage() {
       setPreviousMode("signup");
       setMode("verify");
       setStatus("We've sent you a verification code. Check your email.");
+      setIsError(false);
     },
     onError: handleError,
   });
@@ -113,6 +117,7 @@ export default function AuthPage() {
       setPreviousMode("login");
       setMode("verify");
       setStatus("We've sent you a verification code. Check your email.");
+      setIsError(false);
     },
     onError: handleError,
   });
@@ -167,7 +172,12 @@ export default function AuthPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {status && (
-            <div className="p-3 rounded-lg bg-muted text-muted-foreground text-sm">
+            <div className={cn(
+              "p-3 rounded-lg text-sm",
+              isError 
+                ? "bg-destructive/15 text-destructive border border-destructive/50"
+                : "bg-muted text-muted-foreground"
+            )}>
               {status}
             </div>
           )}
