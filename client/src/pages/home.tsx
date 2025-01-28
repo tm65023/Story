@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Calendar as CalendarIcon, Search, Upload } from "lucide-react";
+import { Calendar as CalendarIcon, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,19 +19,12 @@ import { Entry } from "@/lib/types";
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [date, setDate] = useState<Date>(new Date());
-  const [files, setFiles] = useState<FileList | null>(null);
 
   const { data: entries = [] } = useQuery<Entry[]>({
     queryKey: [
       `/api/search${searchQuery ? `?q=${searchQuery}` : ""}`,
     ],
   });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFiles(e.target.files);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,28 +69,9 @@ export default function Home() {
                 />
               </PopoverContent>
             </Popover>
-
-            <div className="relative">
-              <Input
-                type="file"
-                multiple
-                accept="image/*,application/pdf,.doc,.docx"
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <Button
-                variant="outline"
-                onClick={() => document.getElementById("file-upload")?.click()}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                {files?.length ? `${files.length} files selected` : "Upload Files"}
-              </Button>
-            </div>
           </div>
 
-          <EntryEditor date={date} />
+          <EntryEditor />
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

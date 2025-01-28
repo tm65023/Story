@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Upload } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -25,6 +25,7 @@ export default function EntryEditor() {
   const [url, setUrl] = useState("");
   const [customTag, setCustomTag] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [files, setFiles] = useState<FileList | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -53,6 +54,7 @@ export default function EntryEditor() {
       setUrl("");
       setSelectedTags([]);
       setCustomTag("");
+      setFiles(null);
     },
   });
 
@@ -73,6 +75,12 @@ export default function EntryEditor() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFiles(e.target.files);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -90,6 +98,26 @@ export default function EntryEditor() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
+
+        <div className="relative">
+          <Input
+            type="file"
+            multiple
+            accept="image/*,application/pdf,.doc,.docx"
+            onChange={handleFileChange}
+            className="hidden"
+            id="file-upload"
+          />
+          <Button
+            variant="outline"
+            onClick={() => document.getElementById("file-upload")?.click()}
+            className="flex items-center gap-2 w-full justify-center"
+          >
+            <Upload className="h-4 w-4" />
+            {files?.length ? `${files.length} files selected` : "Upload Files"}
+          </Button>
+        </div>
+
         <Input
           placeholder="URL (optional)"
           value={url}
